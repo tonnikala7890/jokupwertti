@@ -1,0 +1,3441 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>PERTTI: JUNASEKOILU — Joulupukin Salainen Paikka &amp; Pääserverit</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Space+Grotesk:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      overflow: hidden;
+      background: radial-gradient(circle at 50% 0%, #0b1c36 0%, #030712 68%, #01030a 100%);
+      color: #f8fafc;
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+    .font-display { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+    .glass {
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.86), rgba(2, 6, 23, 0.94));
+      backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      box-shadow: 0 16px 42px rgba(0, 0, 0, 0.68), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    }
+    .aurora-text {
+      background: linear-gradient(90deg, #34d399, #38bdf8, #c084fc, #fde047, #34d399);
+      background-size: 300% auto;
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      animation: auroraShift 5.5s linear infinite;
+    }
+    @keyframes auroraShift { to { background-position: 300% center; } }
+    @keyframes popIn {
+      from { opacity: 0; transform: scale(0.93) translateY(10px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .modal-anim { animation: popIn 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    @keyframes pulseAurora {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.6), 0 10px 24px rgba(0,0,0,0.45); }
+      50% { box-shadow: 0 0 28px 6px rgba(56, 189, 248, 0.5), 0 10px 28px rgba(0,0,0,0.55); }
+    }
+    .pulse-aurora { animation: pulseAurora 2.1s infinite; }
+    @keyframes alarmPulse {
+      0%, 100% { box-shadow: 0 0 14px rgba(239, 68, 68, 0.65); border-color: rgba(248, 113, 113, 0.9); }
+      50% { box-shadow: 0 0 32px rgba(239, 68, 68, 1); border-color: rgba(254, 202, 202, 1); }
+    }
+    .alarm-glow { animation: alarmPulse 0.75s ease-in-out infinite; }
+    .game-btn {
+      transition: transform 0.12s ease, filter 0.15s ease, box-shadow 0.15s ease;
+      cursor: pointer;
+    }
+    .game-btn:hover { filter: brightness(1.12); transform: translateY(-1px); }
+    .game-btn:active { transform: translateY(1px) scale(0.98); }
+    .slot-btn { transition: all 0.15s ease; cursor: pointer; }
+    .slot-btn.active {
+      border-color: #34d399 !important;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.36), rgba(6, 182, 212, 0.28)) !important;
+      box-shadow: 0 0 18px rgba(52, 211, 153, 0.5), inset 0 1px 0 rgba(255,255,255,0.2);
+      transform: translateY(-2px);
+    }
+    .canvas-frame {
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.34), 0 28px 80px rgba(0, 0, 0, 0.88), 0 0 55px rgba(52, 211, 153, 0.16), inset 0 0 60px rgba(56, 189, 248, 0.12);
+    }
+    canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+  </style>
+</head>
+<body class="flex flex-col items-center justify-between p-2 sm:p-3 gap-2">
+
+  <!-- YLÄPALKKI (HUD) -->
+  <header class="glass w-full max-w-6xl rounded-2xl px-3 py-2 flex flex-wrap items-center justify-between gap-2 z-20">
+    <div class="flex items-center gap-2.5 min-w-0">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500/30 to-cyan-500/30 border border-emerald-400/40 flex items-center justify-center text-lg shrink-0">
+        🚂
+      </div>
+      <div class="min-w-0">
+        <h1 class="font-display text-sm sm:text-base font-extrabold tracking-tight leading-tight aurora-text truncate">
+          PERTTI: JUNASEKOILU — SALAINEN PAIKKA
+        </h1>
+        <div class="flex items-center gap-1.5 text-[11px] text-slate-300 truncate">
+          <span id="phase-dot" class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
+          <span id="hud-subtitle" class="truncate">Lähtöasema — Kävele lipunmyyntiin tai junan ovelle [E]!</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex items-center flex-wrap gap-1.5 sm:gap-2">
+      <!-- HP -->
+      <div class="flex items-center gap-1.5 bg-slate-900/90 border border-white/15 rounded-xl px-2.5 py-1">
+        <span class="text-xs">❤️</span>
+        <div class="w-16 sm:w-20 h-2.5 bg-slate-800 rounded-full overflow-hidden">
+          <div id="hp-bar" class="h-full bg-gradient-to-r from-rose-500 via-amber-400 to-emerald-400 transition-all duration-150" style="width:100%"></div>
+        </div>
+        <span id="hp-text" class="text-xs font-extrabold text-slate-100 w-7 text-right">100</span>
+      </div>
+
+      <!-- Rahat -->
+      <div class="bg-slate-900/90 border border-amber-400/30 rounded-xl px-2.5 py-1 text-xs font-extrabold text-amber-300">
+        💶 <span id="money-text">60</span> €
+      </div>
+
+      <!-- Lippu -->
+      <div id="ticket-badge" class="bg-slate-900/90 border border-white/15 rounded-xl px-2.5 py-1 text-[11px] font-bold text-slate-300">
+        🎫 Ei lippua
+      </div>
+
+      <!-- Pika-Rovaniemi -->
+      <button id="btn-jump-rovaniemi" class="game-btn bg-gradient-to-r from-cyan-500/25 to-emerald-500/25 hover:from-cyan-500/40 hover:to-emerald-500/40 border border-cyan-400/45 text-cyan-200 rounded-xl px-2.5 py-1 text-[11px] font-extrabold">
+        ❄️ Pika-Rovaniemi
+      </button>
+
+      <!-- Pika-Salainen Paikka -->
+      <button id="btn-jump-secret" class="game-btn bg-gradient-to-r from-rose-500/25 to-fuchsia-500/25 hover:from-rose-500/40 hover:to-fuchsia-500/40 border border-rose-400/50 text-rose-200 rounded-xl px-2.5 py-1 text-[11px] font-extrabold">
+        🔐 Salainen Paikka
+      </button>
+
+      <!-- Äänet -->
+      <button id="btn-mute" class="game-btn bg-slate-900/85 border border-white/15 rounded-xl px-2.5 py-1 text-xs" title="Äänet päälle/pois">
+        🔊
+      </button>
+    </div>
+  </header>
+
+  <!-- TILA- JA SIJAINTIPALKKI -->
+  <div class="w-full max-w-6xl flex flex-wrap items-center justify-between gap-2 px-1 text-[11px] sm:text-xs z-10">
+    <div class="flex items-center gap-2 flex-wrap">
+      <span id="zone-badge" class="px-2.5 py-0.5 rounded-full bg-slate-900/90 border border-white/15 font-bold text-slate-200">
+        📍 Lähtöasema — Laituri 1
+      </span>
+      <span id="server-hud" class="hidden px-2.5 py-0.5 rounded-full bg-rose-950/90 border border-rose-500/60 font-black text-rose-300 animate-pulse">
+        🖥️ SERVERIT: 100%
+      </span>
+      <span id="escape-timer-hud" class="hidden alarm-glow px-3 py-0.5 rounded-full bg-red-950/95 border-2 border-red-500 font-black text-amber-200 tracking-wider">
+        ⏱️ PAKOAJA: 01:00
+      </span>
+    </div>
+    <div class="flex items-center gap-2 flex-wrap">
+      <span id="bunker-alarm-label" class="hidden text-rose-400 font-black animate-pulse">🚨 HÄLYTYS! ASEISTETUT TONTUT!</span>
+      <span id="speed-boost-label" class="hidden text-cyan-300 font-extrabold animate-pulse">⚡ Nopeusbuusti!</span>
+      <span id="turbo-label" class="hidden text-amber-300 font-extrabold animate-pulse">🔥 TURBO!</span>
+      <span id="police-alert-label" class="hidden text-rose-400 font-extrabold animate-pulse">🚨 LAPIN POLIISI!</span>
+      <span id="king-badge-label" class="hidden text-fuchsia-300 font-extrabold">☢️ Mega-Ase &amp; Megapommi AUKI!</span>
+    </div>
+  </div>
+
+  <!-- PELIRUUTU (CANVAS + MODAALIT) -->
+  <main class="relative w-full max-w-6xl flex-1 min-h-0 rounded-3xl overflow-hidden canvas-frame bg-slate-950">
+    <canvas id="game-canvas"></canvas>
+
+    <!-- TOAST-ILMOITUS -->
+    <div id="toast-box" class="pointer-events-none hidden absolute top-3 left-1/2 -translate-x-1/2 z-30 glass px-4 py-2 rounded-2xl border border-emerald-400/40 text-xs sm:text-sm font-bold text-white text-center max-w-[92%]"></div>
+
+    <!-- INTERAKTIOVIHJE -->
+    <button id="interact-prompt" class="hidden absolute bottom-4 left-1/2 -translate-x-1/2 z-20 game-btn glass px-4 py-2 rounded-2xl border border-emerald-400/60 text-xs sm:text-sm font-extrabold text-emerald-200 shadow-lg">
+      [E] Toimi
+    </button>
+
+    <!-- ALOITUSRUUTU -->
+    <div id="modal-title" class="absolute inset-0 z-40 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4">
+      <div class="modal-anim glass rounded-3xl p-6 sm:p-8 max-w-lg w-full text-center border border-emerald-400/35">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/35 text-[11px] font-extrabold text-emerald-300 mb-3">
+          <span>🌌 ULTRA-REVONTULET</span><span>•</span><span>🔐 SALAINEN PAIKKA</span><span>•</span><span>💥 3 LOPETUSTA</span>
+        </div>
+        <h2 class="font-display text-3xl sm:text-4xl font-black tracking-tight text-white mb-1">
+          PERTTI: JUNASEKOILU
+        </h2>
+        <p class="aurora-text text-sm sm:text-base font-extrabold mb-4">
+          ROVANIEMI, PÄÄSERVERIT &amp; TEHTAAN TUHO ❄️🚂🎅💥
+        </p>
+        <div class="bg-slate-900/80 border border-white/10 rounded-2xl p-3.5 text-xs sm:text-sm text-slate-300 leading-relaxed mb-5">
+          Matkusta ylellisillä junavaunuilla Rovaniemelle, tunkeudu <span class="text-rose-300 font-bold">Joulupukin Salaiseen Paikkaan</span>, sammuta <span class="text-cyan-300 font-bold">Pääserverit</span>, taistele aseistettuja tonttuja vastaan, vedä <span class="text-red-400 font-bold">isosta punaisesta vivusta</span> ja pakene <span class="text-amber-300 font-bold">1 minuutissa</span> ennen kuin koko tehdas räjähtää!
+        </div>
+        <button id="btn-start-game" class="game-btn pulse-aurora w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 via-cyan-400 to-sky-500 text-slate-950 font-black text-base tracking-wide">
+          🚂 ALOITA MATKA ROVANIEMELLE
+        </button>
+        <p class="text-[11px] text-slate-400 mt-3">
+          <b>A/D</b> liiku • <b>Shift</b> juokse • <b>Space/Klikkaus</b> hyökkää • <b>R</b> lataa • <b>E</b> toimi • <b>1–8/Rulla</b> aseet
+        </p>
+      </div>
+    </div>
+
+    <!-- LIPPUVALINTAMODAALI -->
+    <div id="modal-ticket" class="hidden absolute inset-0 z-40 flex items-center justify-center bg-slate-950/75 backdrop-blur-sm p-4">
+      <div class="modal-anim glass rounded-3xl p-6 max-w-md w-full text-center border border-cyan-400/40">
+        <div class="text-4xl mb-2">🎫</div>
+        <h3 class="font-display text-2xl font-black text-white mb-1">Yöjuna Rovaniemelle</h3>
+        <p class="text-xs sm:text-sm text-slate-300 mb-5">
+          Lipunmyyjä katsoo Perttiä epäilevästi. Miten nouset junaan?
+        </p>
+        <div class="flex flex-col gap-2.5">
+          <button id="btn-buy-ticket" class="game-btn w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 font-black text-sm">
+            🎫 Osta lippu Rovaniemelle (25 €)
+          </button>
+          <button id="btn-stowaway" class="game-btn w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-rose-600 to-orange-600 text-white font-black text-sm">
+            😈 Livahtaa jäniksenä (0 € — Konduktöörivaara!)
+          </button>
+          <button id="btn-close-ticket" class="game-btn w-full py-2 rounded-xl bg-slate-800/80 text-slate-300 text-xs font-bold">
+            Peruuta
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- KAUPPAMODAALI (RAVINTOLAVAUNU & POROKAHVILA) -->
+    <div id="modal-shop" class="hidden absolute inset-0 z-40 flex items-center justify-center bg-slate-950/75 backdrop-blur-sm p-4">
+      <div class="modal-anim glass rounded-3xl p-5 sm:p-6 max-w-lg w-full border border-amber-400/40">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h3 id="shop-title" class="font-display text-xl font-black text-amber-300">🍽️ Ravintolavaunu</h3>
+            <p class="text-xs text-slate-300">Rahat: <b id="shop-money" class="text-amber-300">60 €</b></p>
+          </div>
+          <button id="btn-close-shop" class="game-btn px-3 py-1.5 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold">Sulje ✕</button>
+        </div>
+        <div id="shop-items" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5"></div>
+      </div>
+    </div>
+
+    <!-- JOULUPUKIN KYSYMYSMODAALI -->
+    <div id="modal-santa" class="hidden absolute inset-0 z-40 flex items-center justify-center bg-slate-950/75 backdrop-blur-sm p-4">
+      <div class="modal-anim glass rounded-3xl p-6 max-w-md w-full text-center border border-rose-400/45">
+        <div class="text-5xl mb-2">🎅</div>
+        <h3 class="font-display text-2xl font-black text-amber-300 mb-1">Joulupukki kysyy:</h3>
+        <p class="text-sm text-slate-200 mb-5">
+          "Ho ho ho, Pertti! Oletko ollut <b>kiltti poika</b> tänä vuonna?"
+        </p>
+        <div class="flex flex-col gap-2.5">
+          <button id="btn-santa-nice" class="game-btn w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 font-black text-sm">
+            😇 Kyllä Joulupukki! Olen ollut super kiltti! (→ Tehdas)
+          </button>
+          <button id="btn-santa-naughty" class="game-btn w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-rose-600 to-red-700 text-white font-black text-sm">
+            😈 En ollut kiltti... olen rikollinen!
+          </button>
+          <button id="btn-close-santa" class="game-btn w-full py-2 rounded-xl bg-slate-800/80 text-slate-300 text-xs font-bold">
+            Poistu
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIP / GAME OVER MODAALI -->
+    <div id="modal-rip" class="hidden absolute inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
+      <div class="modal-anim glass rounded-3xl p-6 sm:p-8 max-w-md w-full text-center border border-rose-500/60">
+        <div id="rip-icon" class="text-5xl mb-2">🪦</div>
+        <h2 id="rip-title" class="font-display text-3xl font-black text-rose-400 mb-2">RIP PERTTI</h2>
+        <p id="rip-reason" class="text-sm text-slate-200 leading-relaxed mb-5"></p>
+        <div class="flex flex-col gap-2.5">
+          <button id="btn-rip-mega-train" class="hidden game-btn w-full py-3 rounded-2xl bg-gradient-to-r from-fuchsia-500 via-amber-400 to-rose-500 text-slate-950 font-black text-sm">
+            ☢️ JUNAAN MEGA-ASEILLA! (Räjäytä Megapommi 8!)
+          </button>
+          <button id="btn-rip-rovaniemi" class="game-btn w-full py-2.5 rounded-2xl bg-cyan-500/25 border border-cyan-400/50 text-cyan-200 font-extrabold text-sm">
+            ❄️ Jatka Rovaniemeltä
+          </button>
+          <button id="btn-rip-restart" class="game-btn w-full py-3 rounded-2xl bg-gradient-to-r from-rose-600 to-orange-500 text-white font-black text-sm">
+            🔄 Aloita koko peli alusta
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- VOITTO / LOPETUSMODAALI -->
+    <div id="modal-victory" class="hidden absolute inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4">
+      <div class="modal-anim glass rounded-3xl p-6 sm:p-8 max-w-lg w-full text-center border border-amber-400/60">
+        <div id="victory-icon" class="text-6xl mb-2">🏆</div>
+        <div id="victory-badge" class="inline-block px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/50 text-amber-300 text-xs font-black mb-2">
+          LOPETUS
+        </div>
+        <h2 id="victory-title" class="font-display text-3xl sm:text-4xl font-black aurora-text mb-3">VOITIT PELIN!!</h2>
+        <p id="victory-desc" class="text-sm text-slate-200 leading-relaxed mb-6"></p>
+        <div class="flex flex-col sm:flex-row gap-2.5">
+          <button id="btn-victory-continue" class="game-btn flex-1 py-3 rounded-2xl bg-cyan-500/25 border border-cyan-400/50 text-cyan-200 font-extrabold text-sm">
+            ❄️ Jatka sekoilua
+          </button>
+          <button id="btn-victory-restart" class="game-btn flex-1 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 font-black text-sm">
+            🔄 Pelaa uudestaan
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ALAPALKKI: ASEET (1-8) + MOBIILIOHJAIMET -->
+  <footer class="glass w-full max-w-6xl rounded-2xl px-2.5 py-2 flex flex-wrap items-center justify-between gap-2 z-20">
+    <!-- Asepalkki -->
+    <div class="flex items-center gap-1.5 flex-wrap">
+      <button class="slot-btn active bg-slate-900/90 border border-white/15 rounded-xl px-2.5 py-1.5 text-[11px] font-bold flex items-center gap-1" data-slot="1">
+        <span class="text-slate-400">1</span><span>👊</span><span class="hidden sm:inline">Nyrkit</span>
+      </button>
+      <button class="slot-btn bg-slate-900/90 border border-white/15 rounded-xl px-2.5 py-1.5 text-[11px] font-bold flex items-center gap-1" data-slot="2">
+        <span class="text-slate-400">2</span><span>🔪</span><span class="hidden sm:inline">Puukko</span>
+      </button>
+      <button class="slot-btn bg-slate-900/90 border border-white/15 rounded-xl px-2.5 py-1.5 text-[11px] font-bold flex items-center gap-1" data-slot="3">
+        <span class="text-slate-400">3</span><span>🔫</span><span id="ammo-3" class="text-cyan-300">12/36</span>
+      </button>
+      <button class="slot-btn bg-slate-900/90 border border-white/15 rounded-xl px-2.5 py-1.5 text-[11px] font-bold flex items-center gap-1" data-slot="4">
+        <span class="text-slate-400">4</span><span>💥</span><span id="ammo-4" class="text-amber-300">6/18</span>
+      </button>
+      <button class="slot-btn bg-slate-900/90 border border-white/15 rounded-xl px-2.5 py-1.5 text-[11px] font-bold flex items-center gap-1" data-slot="5">
+        <span class="text-slate-400">5</span><span>⚡</span><span id="ammo-5" class="text-emerald-300">30/90</span>
+      </button>
+      <button class="slot-btn bg-slate-900/90 border border-white/15 rounded-xl px-2.5 py-1.5 text-[11px] font-bold flex items-center gap-1" data-slot="6">
+        <span class="text-slate-400">6</span><span>💣</span><span id="slot-bombs" class="text-rose-300">3</span>
+      </button>
+      <button id="slot-btn-7" class="hidden slot-btn bg-fuchsia-950/80 border border-fuchsia-400/50 rounded-xl px-2.5 py-1.5 text-[11px] font-black text-fuchsia-200 flex items-center gap-1" data-slot="7">
+        <span>7</span><span>☢️</span><span>Mega</span>
+      </button>
+      <button id="slot-btn-8" class="hidden slot-btn bg-amber-950/80 border border-amber-400/60 rounded-xl px-2.5 py-1.5 text-[11px] font-black text-amber-200 flex items-center gap-1" data-slot="8">
+        <span>8</span><span>💥</span><span id="slot-megabombs">3</span>
+      </button>
+    </div>
+
+    <!-- Kosketusohjaimet mobiilille / pikapainikkeet -->
+    <div class="flex items-center gap-1.5">
+      <button id="touch-left" class="game-btn bg-slate-800/90 border border-white/15 rounded-xl px-3 py-1.5 text-xs font-black">◀</button>
+      <button id="touch-right" class="game-btn bg-slate-800/90 border border-white/15 rounded-xl px-3 py-1.5 text-xs font-black">▶</button>
+      <button id="touch-attack" class="game-btn bg-rose-600/85 border border-rose-400/50 rounded-xl px-3 py-1.5 text-xs font-black">🔥 Hyökkää</button>
+      <button id="touch-reload" class="game-btn bg-slate-800/90 border border-white/15 rounded-xl px-2.5 py-1.5 text-xs font-bold">🔄 R</button>
+    </div>
+  </footer>
+
+<script>
+(() => {
+  'use strict';
+
+  // =========================================================================
+  // 1. CANVAS & PERUSVAKIOT
+  // =========================================================================
+  const canvas = document.getElementById('game-canvas');
+  const ctx = canvas.getContext('2d');
+  const VIEW_W = 1152;
+  const VIEW_H = 540;
+  const GROUND_Y = 472;
+
+  let dpr = Math.min(window.devicePixelRatio || 1, 2);
+  let globalTime = 0;
+  let lastFrameTime = performance.now();
+
+  function resizeCanvas() {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+    canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+  }
+  window.addEventListener('resize', resizeCanvas);
+
+  // =========================================================================
+  // 2. WEB AUDIO ÄÄNISYNTETISAATTORI (EI ULKOISIA URL-OSOITTEITA)
+  // =========================================================================
+  let audioCtx = null;
+  let muted = false;
+
+  function ensureAudio() {
+    if (!audioCtx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {});
+    }
+  }
+
+  function playSound(type) {
+    if (muted) return;
+    try {
+      ensureAudio();
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      if (type === 'punch' || type === 'slash') {
+        osc.type = type === 'slash' ? 'sawtooth' : 'triangle';
+        osc.frequency.setValueAtTime(type === 'slash' ? 420 : 190, now);
+        osc.frequency.exponentialRampToValueAtTime(55, now + 0.11);
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        osc.start(now); osc.stop(now + 0.12);
+      } else if (type === 'shoot') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(340, now);
+        osc.frequency.exponentialRampToValueAtTime(48, now + 0.1);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+        osc.start(now); osc.stop(now + 0.11);
+      } else if (type === 'shotgun') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(190, now);
+        osc.frequency.exponentialRampToValueAtTime(28, now + 0.22);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+        osc.start(now); osc.stop(now + 0.24);
+      } else if (type === 'mega') {
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(760, now);
+        osc.frequency.exponentialRampToValueAtTime(90, now + 0.16);
+        gain.gain.setValueAtTime(0.22, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.17);
+        osc.start(now); osc.stop(now + 0.17);
+      } else if (type === 'reload') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(280, now);
+        osc.frequency.setValueAtTime(460, now + 0.08);
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+        osc.start(now); osc.stop(now + 0.18);
+      } else if (type === 'pickup' || type === 'buy') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(520, now);
+        osc.frequency.setValueAtTime(780, now + 0.07);
+        gain.gain.setValueAtTime(0.14, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        osc.start(now); osc.stop(now + 0.2);
+      } else if (type === 'boom') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(135, now);
+        osc.frequency.exponentialRampToValueAtTime(20, now + 0.55);
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.58);
+        osc.start(now); osc.stop(now + 0.58);
+      } else if (type === 'alarm') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(520, now);
+        osc.frequency.setValueAtTime(380, now + 0.12);
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        osc.start(now); osc.stop(now + 0.25);
+      } else if (type === 'siren') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(440, now);
+        osc.frequency.linearRampToValueAtTime(860, now + 0.28);
+        osc.frequency.linearRampToValueAtTime(440, now + 0.56);
+        gain.gain.setValueAtTime(0.14, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.58);
+        osc.start(now); osc.stop(now + 0.58);
+      } else if (type === 'lever') {
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(160, now);
+        osc.frequency.exponentialRampToValueAtTime(55, now + 0.24);
+        gain.gain.setValueAtTime(0.24, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+        osc.start(now); osc.stop(now + 0.26);
+      } else if (type === 'tick') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(920, now);
+        osc.frequency.exponentialRampToValueAtTime(480, now + 0.05);
+        gain.gain.setValueAtTime(0.11, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+        osc.start(now); osc.stop(now + 0.06);
+      } else if (type === 'mega_boom') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(110, now);
+        osc.frequency.exponentialRampToValueAtTime(14, now + 1.15);
+        gain.gain.setValueAtTime(0.42, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 1.18);
+        osc.start(now); osc.stop(now + 1.18);
+      }
+    } catch (_) {}
+  }
+
+  // =========================================================================
+  // 3. DOM-ELEMENTIT & MODAALIT
+  // =========================================================================
+  const elHpBar = document.getElementById('hp-bar');
+  const elHpText = document.getElementById('hp-text');
+  const elMoneyText = document.getElementById('money-text');
+  const elTicketBadge = document.getElementById('ticket-badge');
+  const elZoneBadge = document.getElementById('zone-badge');
+  const elServerHud = document.getElementById('server-hud');
+  const elEscapeHud = document.getElementById('escape-timer-hud');
+  const elBunkerAlarm = document.getElementById('bunker-alarm-label');
+  const elSubtitle = document.getElementById('hud-subtitle');
+  const elPhaseDot = document.getElementById('phase-dot');
+  const elSpeedBoost = document.getElementById('speed-boost-label');
+  const elTurboLabel = document.getElementById('turbo-label');
+  const elPoliceAlert = document.getElementById('police-alert-label');
+  const elKingBadge = document.getElementById('king-badge-label');
+  const elToast = document.getElementById('toast-box');
+  const elInteract = document.getElementById('interact-prompt');
+
+  const modals = {
+    title: document.getElementById('modal-title'),
+    ticket: document.getElementById('modal-ticket'),
+    shop: document.getElementById('modal-shop'),
+    santa: document.getElementById('modal-santa'),
+    rip: document.getElementById('modal-rip'),
+    victory: document.getElementById('modal-victory')
+  };
+
+  function closeAllModals() {
+    Object.values(modals).forEach(m => m.classList.add('hidden'));
+  }
+  function anyModalOpen() {
+    return Object.values(modals).some(m => !m.classList.contains('hidden'));
+  }
+
+  let toastTimer = 0;
+  function showToast(msg, duration = 3.2) {
+    elToast.textContent = msg;
+    elToast.classList.remove('hidden');
+    toastTimer = duration;
+  }
+
+  // =========================================================================
+  // 4. TAIVAAN TÄHDET, TÄHDENLENNOT, LUMISADE & POROT
+  // =========================================================================
+  const stars = Array.from({ length: 135 }, () => ({
+    x: Math.random() * 2400,
+    y: 12 + Math.random() * 255,
+    r: 0.7 + Math.random() * 1.7,
+    speed: 1.2 + Math.random() * 2.8,
+    phase: Math.random() * Math.PI * 2,
+    cross: Math.random() < 0.22
+  }));
+
+  const shootingStars = [];
+
+  const snow = Array.from({ length: 175 }, (_, idx) => {
+    const layer = idx < 65 ? 0 : (idx < 135 ? 1 : 2);
+    return {
+      x: Math.random() * VIEW_W,
+      y: Math.random() * VIEW_H,
+      layer,
+      r: layer === 0 ? (0.9 + Math.random() * 1.1) : (layer === 1 ? (1.7 + Math.random() * 1.5) : (3.2 + Math.random() * 2.8)),
+      vy: layer === 0 ? (18 + Math.random() * 20) : (layer === 1 ? (34 + Math.random() * 34) : (52 + Math.random() * 44)),
+      vx: (layer === 0 ? -8 : (layer === 1 ? -18 : -30)) - Math.random() * 14,
+      twinkle: Math.random() * 6.28
+    };
+  });
+
+  const reindeerList = [
+    { x: 1180, dir: 1, rudolph: true, phase: 0 },
+    { x: 1350, dir: -1, rudolph: false, phase: 1.5 },
+    { x: 1580, dir: 1, rudolph: false, phase: 3.1 }
+  ];
+
+  // =========================================================================
+  // 5. PELITILA & 12 ALUEEN GENEROINTI
+  // =========================================================================
+  let state = null;
+  let megaUnlocked = false;
+  const keys = {};
+  const touchState = { left: false, right: false };
+  const mouse = { x: VIEW_W / 2, y: VIEW_H / 2, down: false };
+
+  function makeNPC(opts) {
+    return {
+      x: opts.x,
+      y: GROUND_Y,
+      vx: 0,
+      dir: opts.dir || (Math.random() < 0.5 ? -1 : 1),
+      role: opts.role || 'passenger',
+      coat: opts.coat || '#334155',
+      pants: opts.pants || '#0f172a',
+      hat: opts.hat || 'none',
+      scale: opts.scale || 1,
+      hp: opts.hp || 60,
+      maxHp: opts.hp || 60,
+      alive: true,
+      panic: false,
+      hitFlash: 0,
+      walkPhase: Math.random() * 10,
+      speech: opts.speech || '',
+      speechTimer: opts.speech ? 4.5 : 0,
+      shootTimer: 0.7 + Math.random() * 0.6,
+      homeX: opts.x
+    };
+  }
+
+  function createZones() {
+    const zones = [
+      { id: 0, short: 'Lähtöasema', name: 'Lähtöasema — Laituri 1', width: 1152, npcs: [], pickups: [] },
+      { id: 1, short: 'Vaunu 1', name: 'Vaunu 1 — Takaosa', width: 1400, npcs: [], pickups: [] },
+      { id: 2, short: 'Vaunu 2', name: 'Vaunu 2 — Perusvaunu', width: 1400, npcs: [], pickups: [] },
+      { id: 3, short: 'Vaunu 3', name: 'Vaunu 3 — Ravintolavaunu', width: 1400, npcs: [], pickups: [] },
+      { id: 4, short: 'Vaunu 4', name: 'Vaunu 4 — Hiljainen vaunu', width: 1400, npcs: [], pickups: [] },
+      { id: 5, short: 'Vaunu 5', name: 'Vaunu 5 — Ekstra-luokka (VIP)', width: 1400, npcs: [], pickups: [] },
+      { id: 6, short: 'Vaunu 6', name: 'Vaunu 6 — Konehuone', width: 1400, npcs: [], pickups: [], engineOverclocked: false, engineDestroyed: false },
+      { id: 7, short: 'Vaunu 7', name: 'Vaunu 7 — Kapteenin ohjaamo', width: 1200, npcs: [], pickups: [] },
+      { id: 8, short: 'Rovaniemi', name: 'Rovaniemi 66°N — Napapiiri & Pajakylä', width: 2400, npcs: [], pickups: [] },
+      { id: 9, short: 'Tehdas', name: 'Tonttujen Tehdas — Serverihuone', width: 1800, npcs: [], pickups: [], serverPct: 100, shuttingDown: false, serverDone: false, doorOpen: false },
+      { id: 10, short: 'Salainen Huone', name: 'Joulupukin Salainen Lahjahuone', width: 1200, npcs: [], pickups: [], giftTaken: false, santaShot: false },
+      {
+        id: 11,
+        short: 'Salainen Paikka',
+        name: 'Joulupukin Salainen Paikka — Pääserverit',
+        width: 2400,
+        npcs: [],
+        pickups: [],
+        mainServersOff: false,
+        alarmActive: false,
+        leverPulled: false,
+        escapeTimer: 0,
+        lastTickSec: 61,
+        sirenCooldown: 0,
+        reinforceTimer: 0,
+        wavesSpawned: 0
+      }
+    ];
+
+    // Vaunu 1
+    zones[1].npcs.push(
+      makeNPC({ x: 420, coat: '#2563eb', hat: 'beanie', speech: 'Kohti Rovaniemeä!' }),
+      makeNPC({ x: 860, role: 'conductor', coat: '#1e3a8a', hat: 'conductor', hp: 90, speech: 'Matkaliput tarkastukseen!' })
+    );
+    zones[1].pickups.push({ x: 640, type: 'money', taken: false });
+
+    // Vaunu 2
+    zones[2].npcs.push(
+      makeNPC({ x: 360, coat: '#7c3aed', speech: 'Onpa upeat revontulet!' }),
+      makeNPC({ x: 780, coat: '#059669', hat: 'beanie', speech: 'Hieno yöjuna!' }),
+      makeNPC({ x: 1080, role: 'conductor', coat: '#1e3a8a', hat: 'conductor', hp: 90, speech: 'Lippu esiin kiitos!' })
+    );
+    zones[2].pickups.push({ x: 560, type: 'ammo', taken: false });
+
+    // Vaunu 3 — Ravintola
+    zones[3].npcs.push(
+      makeNPC({ x: 460, coat: '#b45309', speech: 'Poronkäristys on parasta!' }),
+      makeNPC({ x: 960, coat: '#be185d', speech: 'Kahvia ja korvapuustia!' })
+    );
+    zones[3].pickups.push({ x: 1160, type: 'money', taken: false });
+
+    // Vaunu 4 — Hiljainen
+    zones[4].npcs.push(
+      makeNPC({ x: 440, coat: '#475569', speech: 'Shhh... täällä nukutaan.' }),
+      makeNPC({ x: 920, coat: '#0f766e', speech: 'Hiljaisuutta!' })
+    );
+    zones[4].pickups.push({ x: 690, type: 'bomb', taken: false });
+
+    // Vaunu 5 — Ekstra VIP
+    zones[5].npcs.push(
+      makeNPC({ x: 430, coat: '#92400e', speech: 'VIP-luokassa kelpaa!' }),
+      makeNPC({ x: 890, role: 'police', coat: '#1d4ed8', hat: 'police', hp: 95, speech: 'Vartioin VIP-vaunua.' })
+    );
+    zones[5].pickups.push({ x: 650, type: 'money', taken: false }, { x: 1120, type: 'ammo', taken: false });
+
+    // Vaunu 6 — Konehuone
+    zones[6].npcs.push(
+      makeNPC({ x: 520, coat: '#ca8a04', speech: 'Moottori käy kuumana!' })
+    );
+    zones[6].pickups.push({ x: 980, type: 'medkit', taken: false }, { x: 1140, type: 'bomb', taken: false });
+
+    // Vaunu 7 — Kapteenin ohjaamo
+    zones[7].npcs.push(
+      makeNPC({ x: 760, role: 'captain', coat: '#1e293b', hat: 'captain', hp: 110, speech: 'Vedä turbovivusta [E] Rovaniemelle!' })
+    );
+
+    // Rovaniemi (zone 8)
+    zones[8].npcs.push(
+      makeNPC({ x: 420, coat: '#0284c7', hat: 'beanie', speech: 'Tervetuloa Rovaniemelle!' }),
+      makeNPC({ x: 1020, coat: '#7c3aed', hat: 'beanie', speech: 'Napapiirillä on taikaa!' }),
+      makeNPC({ x: 1620, role: 'elf', coat: '#16a34a', hat: 'elf', scale: 0.88, speech: 'Joulupukki odottaa Pajakylässä!' }),
+      makeNPC({ x: 2040, role: 'santa', coat: '#dc2626', pants: '#991b1b', hat: 'santa', scale: 1.24, hp: 200, speech: 'Ho ho ho! Oletko ollut kiltti poika? [E]' })
+    );
+    zones[8].pickups.push({ x: 1480, type: 'medkit', taken: false }, { x: 1780, type: 'ammo', taken: false });
+
+    // Tonttujen Tehdas (zone 9)
+    zones[9].npcs.push(
+      makeNPC({ x: 460, role: 'elf', coat: '#16a34a', hat: 'elf', scale: 0.88, hp: 55, speech: 'Lahjat valmiiksi!' }),
+      makeNPC({ x: 760, role: 'elf', coat: '#dc2626', hat: 'elf', scale: 0.88, hp: 55, speech: 'Älä koske servereihin!' }),
+      makeNPC({ x: 1120, role: 'elf', coat: '#0d9488', hat: 'elf', scale: 0.88, hp: 55, speech: 'Serverit pyörivät 100%!' })
+    );
+    zones[9].pickups.push({ x: 600, type: 'ammo', taken: false }, { x: 1280, type: 'medkit', taken: false });
+
+    // Joulupukin Salainen Huone (zone 10)
+    zones[10].npcs.push(
+      makeNPC({ x: 880, role: 'santa_secret', coat: '#dc2626', pants: '#991b1b', hat: 'santa', scale: 1.24, hp: 160, speech: 'Ho ho ho... Ota lahjasi [E]!' })
+    );
+
+    // Joulupukin Salainen Paikka — Pääserverit (zone 11)
+    zones[11].npcs.push(
+      makeNPC({ x: 640, role: 'elf', coat: '#0f766e', pants: '#0f172a', hat: 'elf', scale: 0.88, hp: 65, speech: 'Tämä on pääserverien ydin!' }),
+      makeNPC({ x: 1320, role: 'elf', coat: '#15803d', pants: '#0f172a', hat: 'elf', scale: 0.88, hp: 65, speech: 'Älä koske pääservereihin!' }),
+      makeNPC({ x: 1840, role: 'elf', coat: '#b91c1c', pants: '#0f172a', hat: 'elf', scale: 0.88, hp: 70, speech: 'Iso punainen vipu on suojattu!' })
+    );
+    zones[11].pickups.push(
+      { x: 460, type: 'ammo', taken: false },
+      { x: 840, type: 'medkit', taken: false },
+      { x: 1460, type: 'ammo', taken: false },
+      { x: 1690, type: 'bomb', taken: false },
+      { x: 1960, type: 'medkit', taken: false }
+    );
+
+    return zones;
+  }
+
+  function resetGame(startImmediately = false) {
+    state = {
+      started: startImmediately,
+      zone: 0,
+      ticket: 'none', // none | bought | stowaway
+      arrivedRovaniemi: false,
+      turboActive: false,
+      policeWanted: false,
+      camX: 0,
+      shake: 0,
+      flash: 0,
+      flashColor: '#ffffff',
+      cutscene: null,
+      ghost: null,
+      zones: createZones(),
+      bullets: [],
+      bombs: [],
+      particles: [],
+      casings: [],
+      slashArcs: [],
+      footprints: [],
+      muzzleLight: 0,
+      player: {
+        x: 165,
+        y: GROUND_Y,
+        vx: 0,
+        dir: 1,
+        hp: 100,
+        maxHp: 100,
+        money: 60,
+        weapon: 1,
+        mag: { 3: 12, 4: 6, 5: 30 },
+        maxMag: { 3: 12, 4: 6, 5: 30 },
+        reserve: { 3: 36, 4: 18, 5: 90 },
+        bombs: 3,
+        megabombs: 3,
+        attackCooldown: 0,
+        reloadTimer: 0,
+        reloadDuration: 1.0,
+        recoil: 0,
+        walkPhase: 0,
+        hitFlash: 0,
+        speedBoostTimer: 0
+      }
+    };
+    closeAllModals();
+    if (!startImmediately) modals.title.classList.remove('hidden');
+    updateHUD();
+  }
+
+  // =========================================================================
+  // 6. HUD-PÄIVITYS & KAUPPA
+  // =========================================================================
+  function updateHUD() {
+    if (!state) return;
+    const p = state.player;
+    const z = state.zones[state.zone];
+
+    elHpBar.style.width = `${Math.max(0, Math.min(100, (p.hp / p.maxHp) * 100))}%`;
+    elHpText.textContent = Math.max(0, Math.ceil(p.hp));
+    elMoneyText.textContent = p.money;
+
+    if (state.ticket === 'bought') {
+      elTicketBadge.textContent = '🎫 Lippu: Rovaniemi';
+      elTicketBadge.className = 'bg-emerald-950/90 border border-emerald-400/50 rounded-xl px-2.5 py-1 text-[11px] font-bold text-emerald-300';
+    } else if (state.ticket === 'stowaway') {
+      elTicketBadge.textContent = '🐇 JÄNIS!';
+      elTicketBadge.className = 'bg-rose-950/90 border border-rose-500/60 rounded-xl px-2.5 py-1 text-[11px] font-black text-rose-300 animate-pulse';
+    } else {
+      elTicketBadge.textContent = '🎫 Ei lippua';
+      elTicketBadge.className = 'bg-slate-900/90 border border-white/15 rounded-xl px-2.5 py-1 text-[11px] font-bold text-slate-300';
+    }
+
+    elZoneBadge.textContent = `📍 ${z.name}`;
+
+    // Aseiden panokset
+    document.getElementById('ammo-3').textContent = `${p.mag[3]}/${p.reserve[3]}`;
+    document.getElementById('ammo-4').textContent = `${p.mag[4]}/${p.reserve[4]}`;
+    document.getElementById('ammo-5').textContent = `${p.mag[5]}/${p.reserve[5]}`;
+    document.getElementById('slot-bombs').textContent = `${p.bombs}`;
+    document.getElementById('slot-megabombs').textContent = `${p.megabombs}`;
+    document.getElementById('slot-btn-7').classList.toggle('hidden', !megaUnlocked);
+    document.getElementById('slot-btn-8').classList.toggle('hidden', !megaUnlocked);
+
+    document.querySelectorAll('.slot-btn').forEach(btn => {
+      btn.classList.toggle('active', Number(btn.dataset.slot) === p.weapon);
+    });
+
+    // Server HUD
+    if (state.zone === 9) {
+      elServerHud.classList.remove('hidden');
+      elServerHud.textContent = `🖥️ SERVERIT: ${Math.ceil(z.serverPct)}%`;
+    } else if (state.zone === 11) {
+      elServerHud.classList.remove('hidden');
+      elServerHud.textContent = z.mainServersOff ? '💻 PÄÄSERVERIT: OFF (0%)' : '💻 PÄÄSERVERIT: ONLINE (100%)';
+    } else {
+      elServerHud.classList.add('hidden');
+    }
+
+    // 1 minuutin pakoajastin HUD
+    const z11 = state.zones[11];
+    if (state.zone === 11 && z11.leverPulled && z11.escapeTimer > 0) {
+      const secs = Math.ceil(z11.escapeTimer);
+      const mm = String(Math.floor(secs / 60)).padStart(2, '0');
+      const ss = String(secs % 60).padStart(2, '0');
+      elEscapeHud.classList.remove('hidden');
+      elEscapeHud.textContent = `⏱️ PAKOAJA: ${mm}:${ss} — JUOKSE VASEMMALLE ULOS!`;
+    } else {
+      elEscapeHud.classList.add('hidden');
+    }
+    elBunkerAlarm.classList.toggle('hidden', !(state.zone === 11 && z11.alarmActive && !z11.leverPulled));
+    elSpeedBoost.classList.toggle('hidden', p.speedBoostTimer <= 0);
+    elTurboLabel.classList.toggle('hidden', !state.turboActive);
+    elPoliceAlert.classList.toggle('hidden', !state.policeWanted || state.zone !== 8);
+    elKingBadge.classList.toggle('hidden', !megaUnlocked);
+
+    // Alaotsikko
+    if (state.zone === 0) {
+      elSubtitle.textContent = 'Lähtöasema — Kävele lipunmyyntiin tai junan ovelle [E]!';
+      elPhaseDot.className = 'inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0';
+    } else if (state.zone >= 1 && state.zone <= 7) {
+      elSubtitle.textContent = 'Yöjuna Rovaniemelle — Tutki vaunut & vedä ohjaamon turbovivusta!';
+      elPhaseDot.className = 'inline-block w-2 h-2 rounded-full bg-cyan-400 animate-pulse shrink-0';
+    } else if (state.zone === 8) {
+      elSubtitle.textContent = 'Rovaniemi 66°N — Juttele Joulupukille tai etsi Salainen Paikka oikealta [E]!';
+      elPhaseDot.className = 'inline-block w-2 h-2 rounded-full bg-sky-400 animate-pulse shrink-0';
+    } else if (state.zone === 9) {
+      elSubtitle.textContent = z.doorOpen
+        ? 'PILKKOPIMEÄÄ! Uusi salainen ovi avautui oikealla — astu sisään [E]!'
+        : 'Tonttujen Tehdas — Sammuta serverit [E] tai mene Salaiselle Paikalle vasemmalta [E]!';
+      elPhaseDot.className = 'inline-block w-2 h-2 rounded-full bg-rose-400 animate-pulse shrink-0';
+    } else if (state.zone === 10) {
+      elSubtitle.textContent = 'Joulupukin Salainen Huone — Ota lahja [E], ammu Pukki tai mene Pääservereille [E]!';
+      elPhaseDot.className = 'inline-block w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0';
+    } else if (state.zone === 11) {
+      if (z.leverPulled) {
+        elSubtitle.textContent = '💥 TEHDAS RÄJÄHTÄÄ! Juokse täysiä vasemmalle ULOSKÄYNNILLE ennen kuin 1 min loppuu!';
+        elPhaseDot.className = 'inline-block w-2 h-2 rounded-full bg-red-500 animate-ping shrink-0';
+      } else if (z.mainServersOff) {
+        elSubtitle.textContent = '🚨 HÄLYTYS! Raivaa aseistetut tontut & vedä ISOSTA PUNAISESTA VIVUSTA oikealla [E]!';
+        elPhaseDot.className = 'inline-block w-2 h-2 rounded-full bg-rose-500 animate-pulse shrink-0';
+      } else {
+        elSubtitle.textContent = '🔐 Joulupukin Salainen Paikka — Sammuta Pääserverit keskellä [E]!';
+        elPhaseDot.className = 'inline-block w-2 h-2 rounded-full bg-fuchsia-400 animate-pulse shrink-0';
+      }
+    }
+  }
+
+  function openShop(isRovaniemi) {
+    const itemsEl = document.getElementById('shop-items');
+    document.getElementById('shop-title').textContent = isRovaniemi ? '🦌 Porokahvila & Asekauppa' : '🍽️ Ravintolavaunu';
+    document.getElementById('shop-money').textContent = `${state.player.money} €`;
+    const catalog = [
+      { icon: '☕', name: 'Kahvi & Pulla', desc: '+25 HP', price: 8, fn: () => { state.player.hp = Math.min(100, state.player.hp + 25); } },
+      { icon: '🥧', name: 'Lihapiirakka', desc: '+45 HP', price: 12, fn: () => { state.player.hp = Math.min(100, state.player.hp + 45); } },
+      { icon: '🍲', name: 'Poronkäristys', desc: 'Täysi 100 HP', price: 20, fn: () => { state.player.hp = 100; } },
+      { icon: '⚡', name: 'Energiajuoma', desc: 'Nopeusbuusti 15s', price: 10, fn: () => { state.player.speedBoostTimer = 15; } },
+      { icon: '🔫', name: 'Ammuspaketti', desc: 'Panoksia kaikkiin', price: 15, fn: () => { state.player.reserve[3] += 24; state.player.reserve[4] += 12; state.player.reserve[5] += 45; } },
+      { icon: '💣', name: 'Dynamiittipaketti', desc: '+3 Dynamiittia', price: 18, fn: () => { state.player.bombs += 3; } }
+    ];
+    itemsEl.innerHTML = '';
+    catalog.forEach(item => {
+      const btn = document.createElement('button');
+      btn.className = 'game-btn bg-slate-900/90 hover:bg-slate-800 border border-white/15 rounded-2xl p-3 text-left flex items-center justify-between gap-2';
+      btn.innerHTML = `
+        <div>
+          <div class="text-sm font-extrabold text-white">${item.icon} ${item.name}</div>
+          <div class="text-[11px] text-slate-400">${item.desc}</div>
+        </div>
+        <span class="px-2.5 py-1 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-300 font-black text-xs">${item.price} €</span>
+      `;
+      btn.onclick = () => {
+        if (state.player.money < item.price) {
+          playSound('alarm');
+          showToast('❌ Ei tarpeeksi rahaa!');
+          return;
+        }
+        state.player.money -= item.price;
+        item.fn();
+        playSound('buy');
+        document.getElementById('shop-money').textContent = `${state.player.money} €`;
+        showToast(`✅ Ostit: ${item.name}!`);
+        updateHUD();
+      };
+      itemsEl.appendChild(btn);
+    });
+    modals.shop.classList.remove('hidden');
+  }
+
+  // =========================================================================
+  // 7. ALUEIDEN VAIHTO, INTERAKTIOT, TAISTELU & VÄLIVIDEOT
+  // =========================================================================
+  function enterZone(zoneId, spawnX) {
+    state.zone = zoneId;
+    state.player.x = spawnX;
+    state.player.y = GROUND_Y;
+    state.bullets = [];
+    state.bombs = [];
+    state.slashArcs = [];
+    state.footprints = [];
+    state.ghost = null;
+    if (zoneId === 8) state.arrivedRovaniemi = true;
+    const z = state.zones[zoneId];
+    state.camX = Math.max(0, Math.min(z.width - VIEW_W, spawnX - VIEW_W * 0.5));
+    updateHUD();
+  }
+
+  function boardTrain(mode) {
+    if (mode === 'bought') {
+      if (state.player.money < 25) {
+        playSound('alarm');
+        showToast('❌ Rahat eivät riitä lippuun (25 €)! Mene jäniksenä!');
+        return;
+      }
+      state.player.money -= 25;
+      state.ticket = 'bought';
+      playSound('buy');
+      showToast('🎫 Ostit lipun Rovaniemelle! Tervetuloa yöjunaan!');
+    } else {
+      state.ticket = 'stowaway';
+      playSound('alarm');
+      showToast('🐇 Livahtit jäniksenä junaan! Varo konduktööriä!!', 4);
+    }
+    closeAllModals();
+    enterZone(1, 140);
+  }
+
+  function selectWeapon(slot) {
+    if ((slot === 7 || slot === 8) && !megaUnlocked) return;
+    if (slot < 1 || slot > 8) return;
+    state.player.weapon = slot;
+    state.player.reloadTimer = 0;
+    updateHUD();
+  }
+
+  function startReload() {
+    const p = state.player;
+    const w = p.weapon;
+    if (![3, 4, 5].includes(w) || p.reloadTimer > 0) return;
+    if (p.mag[w] >= p.maxMag[w] || p.reserve[w] <= 0) return;
+    p.reloadDuration = w === 4 ? 1.15 : 0.9;
+    p.reloadTimer = p.reloadDuration;
+    playSound('reload');
+  }
+
+  function spawnParticles(x, y, color, count, speed = 160, gravity = 320) {
+    for (let i = 0; i < count; i++) {
+      const ang = Math.random() * Math.PI * 2;
+      const sp = speed * (0.3 + Math.random() * 0.85);
+      state.particles.push({
+        x, y,
+        vx: Math.cos(ang) * sp,
+        vy: Math.sin(ang) * sp - 45,
+        r: 2 + Math.random() * 3.5,
+        color,
+        life: 0.35 + Math.random() * 0.45,
+        maxLife: 0.8,
+        gravity
+      });
+    }
+  }
+
+  function triggerZonePanic() {
+    const z = state.zones[state.zone];
+    z.npcs.forEach(n => {
+      if (n.alive && (n.role === 'passenger' || n.role === 'elf')) {
+        n.panic = true;
+        if (!n.speechTimer) {
+          n.speech = n.role === 'elf' ? 'APUA! PERTTI AMPUU!' : 'HUI! ASEET PIILOON!';
+          n.speechTimer = 2.6;
+        }
+      }
+    });
+    if (state.zone === 8 && !state.policeWanted) {
+      state.policeWanted = true;
+      playSound('siren');
+      z.npcs.push(
+        makeNPC({ x: Math.max(120, state.player.x - 420), role: 'police', coat: '#1d4ed8', hat: 'police', hp: 90, speech: 'LAPIN POLIISI! SEIS!' }),
+        makeNPC({ x: Math.min(2280, state.player.x + 420), role: 'police', coat: '#1d4ed8', hat: 'police', hp: 90, speech: 'PUDOTA ASE PERTTI!' })
+      );
+      showToast('🚨 LAPIN POLIISIPARTIO HÄLYTETTY ROVANIEMELLE!', 3.8);
+      updateHUD();
+    }
+  }
+
+  function damageNPC(n, dmg) {
+    if (!n.alive) return;
+    n.hp -= dmg;
+    n.hitFlash = 0.16;
+    spawnParticles(n.x, n.y - 45, '#ef4444', 8, 150, 320);
+
+    // Salaisen huoneen Joulupukin ampuminen avaa Mega-Aseen & Megapommin + Pukin henki!
+    if (n.role === 'santa_secret' && !state.zones[10].santaShot) {
+      state.zones[10].santaShot = true;
+      megaUnlocked = true;
+      state.player.megabombs = Math.max(3, state.player.megabombs);
+      state.shake = 24;
+      state.flash = 0.65;
+      state.flashColor = '#e879f9';
+      playSound('mega_boom');
+      state.ghost = { x: n.x, y: n.y - 55, speed: 290 };
+      n.alive = false;
+      showToast('☢️ AMMUIT PUKIN! MEGA-ASE (7) & MEGAPOMMI (8) AUKESIVAT — PUKIN HENKI HERÄSI!!', 5.5);
+      updateHUD();
+      return;
+    }
+
+    if (n.hp <= 0) {
+      n.alive = false;
+      state.player.money += 10;
+      spawnParticles(n.x, n.y - 40, '#facc15', 10, 140, 260);
+      updateHUD();
+    }
+  }
+
+  function explodeAt(x, y, isMega = false) {
+    playSound(isMega ? 'mega_boom' : 'boom');
+    state.shake = isMega ? 38 : 22;
+    state.flash = isMega ? 0.85 : 0.45;
+    state.flashColor = isMega ? '#fef08a' : '#fb923c';
+    spawnParticles(x, y, '#fef08a', isMega ? 45 : 24, isMega ? 380 : 250, 260);
+    spawnParticles(x, y, '#f97316', isMega ? 40 : 20, isMega ? 300 : 200, 180);
+    spawnParticles(x, y, '#ef4444', isMega ? 30 : 16, isMega ? 240 : 170, 140);
+
+    // Megapommi junassa -> suistaa junan ojaan -> VOITIT PELIN!
+    if (isMega && state.zone >= 1 && state.zone <= 7) {
+      startTrainDerailVictoryCutscene();
+      return;
+    }
+
+    // Konehuoneen räjäytys
+    if (state.zone === 6 && Math.abs(x - 780) < 220) {
+      state.zones[6].engineDestroyed = true;
+      showToast('💥 Räjäytit junan moottorin! Silti turbovipu toimii ohjaamossa!');
+    }
+
+    const radius = isMega ? 360 : 190;
+    const z = state.zones[state.zone];
+    z.npcs.forEach(n => {
+      if (n.alive && Math.abs(n.x - x) < radius) {
+        damageNPC(n, isMega ? 300 : 110);
+      }
+    });
+    if (Math.abs(state.player.x - x) < radius * 0.55) {
+      hurtPlayer(isMega ? 30 : 24, 'Pertti seisoi liian lähellä omaa pommiaan!');
+    }
+    triggerZonePanic();
+  }
+
+  function hurtPlayer(dmg, reason) {
+    if (state.cutscene) return;
+    const p = state.player;
+    p.hp -= dmg;
+    p.hitFlash = 0.2;
+    state.shake = Math.max(state.shake, 11);
+    updateHUD();
+    if (p.hp <= 0) {
+      triggerGameOver(reason || 'Pertti kaatui taistelussa!', false);
+    }
+  }
+
+  function triggerGameOver(reason, showMegaTrainBtn = false, title = 'RIP PERTTI', icon = '🪦') {
+    state.cutscene = null;
+    document.getElementById('rip-icon').textContent = icon;
+    document.getElementById('rip-title').textContent = title;
+    document.getElementById('rip-reason').textContent = reason;
+    document.getElementById('btn-rip-mega-train').classList.toggle('hidden', !(showMegaTrainBtn || megaUnlocked));
+    modals.rip.classList.remove('hidden');
+  }
+
+  function triggerVictory(title, badge, desc, icon = '🏆') {
+    state.cutscene = null;
+    document.getElementById('victory-icon').textContent = icon;
+    document.getElementById('victory-badge').textContent = badge;
+    document.getElementById('victory-title').textContent = title;
+    document.getElementById('victory-desc').textContent = desc;
+    modals.victory.classList.remove('hidden');
+  }
+
+  function useWeapon() {
+    if (!state.started || state.cutscene || anyModalOpen()) return;
+    const p = state.player;
+    if (p.attackCooldown > 0 || p.reloadTimer > 0) return;
+
+    const w = p.weapon;
+    const z = state.zones[state.zone];
+    const worldMouseX = mouse.x + state.camX;
+    const dx = worldMouseX - p.x;
+    const dy = mouse.y - (p.y - 46);
+    if (Math.abs(dx) > 10) p.dir = dx >= 0 ? 1 : -1;
+    const aimAngle = Math.atan2(dy, dx);
+
+    // 1: Nyrkit, 2: Puukko
+    if (w === 1 || w === 2) {
+      p.attackCooldown = w === 1 ? 0.3 : 0.25;
+      p.recoil = 1;
+      playSound(w === 1 ? 'punch' : 'slash');
+      state.slashArcs.push({ x: p.x + p.dir * 26, y: p.y - 44, dir: p.dir, life: 0.16, color: w === 2 ? '#38bdf8' : '#fef08a', r: w === 2 ? 42 : 28 });
+      const reach = w === 2 ? 82 : 64;
+      const dmg = w === 2 ? 38 : 22;
+      z.npcs.forEach(n => {
+        if (n.alive && Math.abs(n.x - p.x) < reach && Math.sign(n.x - p.x || p.dir) === p.dir) {
+          damageNPC(n, dmg);
+        }
+      });
+      if (w === 2) triggerZonePanic();
+      return;
+    }
+
+    // 6: Dynamiitti, 8: Megapommi
+    if (w === 6 || w === 8) {
+      const isMega = w === 8;
+      if (isMega ? p.megabombs <= 0 : p.bombs <= 0) {
+        playSound('alarm');
+        showToast(isMega ? '💥 Megapommit loppu!' : '💣 Dynamiitit loppu!');
+        return;
+      }
+      if (isMega) p.megabombs--; else p.bombs--;
+      p.attackCooldown = 0.65;
+      state.bombs.push({ x: p.x + p.dir * 22, y: GROUND_Y - 12, vx: p.dir * 165, vy: -195, fuse: 3.0, isMega });
+      playSound('reload');
+      showToast(isMega ? '☢️ MEGAPOMMI HEITETTY! (3 sek)' : '💣 Dynamiitti heitetty! (3 sek)', 2.2);
+      updateHUD();
+      return;
+    }
+
+    // Ampuma-aseet (3, 4, 5, 7)
+    if (w !== 7) {
+      if (p.mag[w] <= 0) {
+        startReload();
+        return;
+      }
+      p.mag[w]--;
+    }
+
+    const muzzleX = p.x + Math.cos(aimAngle) * 28;
+    const muzzleY = p.y - 46 + Math.sin(aimAngle) * 28;
+
+    if (w === 3) {
+      p.attackCooldown = 0.24;
+      p.recoil = 0.9;
+      playSound('shoot');
+      state.bullets.push({ x: muzzleX, y: muzzleY, vx: Math.cos(aimAngle) * 840, vy: Math.sin(aimAngle) * 840, dmg: 28, fromPlayer: true, mega: false, life: 1.2 });
+    } else if (w === 4) {
+      p.attackCooldown = 0.62;
+      p.recoil = 1.6;
+      state.shake = Math.max(state.shake, 7);
+      playSound('shotgun');
+      for (let i = -2; i <= 2; i++) {
+        const a = aimAngle + i * 0.085 + (Math.random() - 0.5) * 0.03;
+        state.bullets.push({ x: muzzleX, y: muzzleY, vx: Math.cos(a) * 760, vy: Math.sin(a) * 760, dmg: 19, fromPlayer: true, mega: false, life: 0.75 });
+      }
+    } else if (w === 5) {
+      p.attackCooldown = 0.095;
+      p.recoil = 0.55;
+      playSound('shoot');
+      const a = aimAngle + (Math.random() - 0.5) * 0.08;
+      state.bullets.push({ x: muzzleX, y: muzzleY, vx: Math.cos(a) * 880, vy: Math.sin(a) * 880, dmg: 17, fromPlayer: true, mega: false, life: 1.1 });
+    } else if (w === 7) {
+      p.attackCooldown = 0.14;
+      p.recoil = 1.1;
+      state.shake = Math.max(state.shake, 6);
+      playSound('mega');
+      state.bullets.push({ x: muzzleX, y: muzzleY, vx: Math.cos(aimAngle) * 1050, vy: Math.sin(aimAngle) * 1050, dmg: 85, fromPlayer: true, mega: true, life: 1.4 });
+    }
+
+    // Hylsy & suuliekki
+    state.casings.push({ x: p.x, y: p.y - 48, vx: -p.dir * (60 + Math.random() * 50), vy: -120 - Math.random() * 60, rot: 0, vrot: 10, color: w === 4 ? '#ef4444' : '#facc15', life: 1.4 });
+    spawnParticles(muzzleX, muzzleY, w === 7 ? '#e879f9' : '#fef08a', 7, 130, 0);
+    spawnParticles(muzzleX, muzzleY, 'rgba(226,232,240,0.45)', 3, 55, -40);
+    state.muzzleLight = 0.14;
+    triggerZonePanic();
+    updateHUD();
+  }
+
+  // --- VÄLIVIDEOT ---
+  function startStowawayRipCutscene() {
+    state.cutscene = { type: 'rip_kick', t: 0 };
+    playSound('alarm');
+    showToast('👞 KONDUKTÖÖRI POTKAISEE PERTTIÄ RAITEILLE!!', 3.5);
+  }
+  function startArrivalRovaniemiCutscene() {
+    state.turboActive = true;
+    state.cutscene = { type: 'arrival_rovaniemi', t: 0 };
+    playSound('lever');
+    showToast('🔥 TURBOVAIHDE PÄÄLLÄ! JUNA KIITÄÄ ROVANIEMELLE!!', 3.5);
+    updateHUD();
+  }
+  function startSantaBombCutscene() {
+    closeAllModals();
+    state.cutscene = { type: 'santa_bomb', t: 0, exploded: false };
+    playSound('alarm');
+    showToast('🎅 "TUHMA POIKA!!" Joulupukki heittää jättipommin!', 3.2);
+  }
+  function startGiftAtomBombCutscene() {
+    state.zones[10].giftTaken = true;
+    state.cutscene = { type: 'gift_atom_bomb', t: 0, exploded: false };
+    playSound('alarm');
+    showToast('🎁 Pertti avaa lahjan... SE ON ATOMIPOMMI!! ☢️', 3.5);
+  }
+  function startTrainDerailVictoryCutscene() {
+    state.cutscene = { type: 'train_derail_victory', t: 0 };
+    playSound('boom');
+    showToast('🚂💥 MEGAPOMMI SUISTI JUNAN OJAAN SUORAAN JOULUPUKIN LUO!', 4);
+  }
+  function startFactoryExplosionVictoryCutscene() {
+    const z = state.zones[11];
+    z.escapeTimer = 0;
+    z.alarmActive = false;
+    state.cutscene = {
+      type: 'factory_explosion_victory',
+      t: 0,
+      stage: 0,
+      gifts: Array.from({ length: 18 }, (_, i) => ({
+        x: 820 + (Math.random() - 0.5) * 140,
+        y: GROUND_Y - 120,
+        vx: (Math.random() - 0.5) * 520,
+        vy: -260 - Math.random() * 340,
+        rot: Math.random() * 6,
+        vrot: (Math.random() - 0.5) * 12,
+        col: ['#ef4444', '#10b981', '#38bdf8', '#facc15', '#c084fc'][i % 5]
+      }))
+    };
+    playSound('mega_boom');
+    state.shake = 34;
+    state.flash = 0.9;
+    state.flashColor = '#fef08a';
+    showToast('🏃‍♂️💨 PERTTI PÄÄSI ULOS! JOULUPUKIN TEHDAS RÄJÄHTÄÄ!! 💥', 4.5);
+    updateHUD();
+  }
+
+  // --- SALAISEN PAIKAN PÄÄSERVERIT & VIPU ---
+  function spawnArmedElvesWave(z) {
+    const spots = [
+      Math.max(220, state.player.x - 360),
+      Math.min(2260, state.player.x + 340),
+      Math.min(2260, state.player.x + 560),
+      Math.min(2260, state.player.x + 760)
+    ];
+    const lines = [
+      'HÄLYTYS! TULTA PERTTIIN!',
+      'ERIKOISTONTTU-RYHMÄ HYÖKKÄÄ!',
+      'PÄÄSERVERIT KAATUIVAT! PYSÄYTTÄKÄÄ HÄNET!',
+      'TÄHTÄYKSESSÄ! AMMUKAA!'
+    ];
+    spots.forEach((sx, i) => {
+      z.npcs.push(makeNPC({
+        x: sx,
+        role: 'armed_elf',
+        coat: '#14532d',
+        pants: '#0f172a',
+        hat: 'tactical_elf',
+        scale: 0.9,
+        hp: 75,
+        speech: lines[i % lines.length]
+      }));
+    });
+  }
+
+  function triggerMainServersShutdown() {
+    const z = state.zones[11];
+    z.mainServersOff = true;
+    z.alarmActive = true;
+    z.sirenCooldown = 0.2;
+    z.reinforceTimer = 9.0;
+    z.wavesSpawned = 1;
+    state.shake = 22;
+    state.flash = 0.55;
+    state.flashColor = '#ef4444';
+    playSound('siren');
+    spawnParticles(1080, GROUND_Y - 120, '#38bdf8', 32, 260, 220);
+    spawnParticles(1080, GROUND_Y - 120, '#ef4444', 24, 220, 220);
+
+    z.npcs.forEach(n => {
+      if (n.alive && n.role === 'elf') {
+        n.role = 'armed_elf';
+        n.hat = 'tactical_elf';
+        n.coat = '#14532d';
+        n.hp = 75;
+        n.maxHp = 75;
+        n.speech = 'HÄLYTYS!! ASEET ESIIN!!';
+        n.speechTimer = 3.5;
+      }
+    });
+    spawnArmedElvesWave(z);
+
+    showToast('🚨 HÄLYTYS!! PÄÄSERVERIT SAMMUTETTU! ASEISTETUT TONTUT HYÖKKÄÄVÄT — MENE OIKEALLE ISOON PUNAISEEN VIPUUN!', 5.5);
+    updateHUD();
+  }
+
+  function pullBigRedLever() {
+    const z = state.zones[11];
+    z.leverPulled = true;
+    z.escapeTimer = 60.0;
+    z.lastTickSec = 60;
+    state.shake = 28;
+    state.flash = 0.7;
+    state.flashColor = '#f97316';
+    playSound('lever');
+    playSound('siren');
+    spawnParticles(2160, GROUND_Y - 95, '#facc15', 34, 240, 240);
+
+    const fleeLines = ['APUA!! SE RÄJÄHTÄÄ!!', 'PAKOON!! 1 MINUUTTI!!', 'JUOSKAA ULOS!!', 'TEHDAS TUHOUTUU!!'];
+    z.npcs.forEach((n, idx) => {
+      if (n.alive) {
+        n.role = 'fleeing_elf';
+        n.panic = true;
+        n.speech = fleeLines[idx % fleeLines.length];
+        n.speechTimer = 6.0;
+      }
+    });
+    for (let i = 0; i < 3; i++) {
+      z.npcs.push(makeNPC({
+        x: 1820 - i * 240,
+        role: 'fleeing_elf',
+        coat: '#15803d',
+        pants: '#0f172a',
+        hat: 'tactical_elf',
+        scale: 0.88,
+        hp: 50,
+        speech: fleeLines[(i + 1) % fleeLines.length]
+      }));
+    }
+
+    showToast('🔴 ISO PUNAINEN VIPU VEDETTY!! TONTUT PAKENEVAT — SINULLA ON 1 MINUUTTI PÄÄSTÄ VASEMMALTA ULOS!', 6.0);
+    updateHUD();
+  }
+
+  // --- INTERAKTIOT [E] ---
+  function getNearbyInteraction() {
+    const p = state.player;
+    const z = state.zones[state.zone];
+
+    if (state.zone === 0) {
+      if (Math.abs(p.x - 515) < 110 || Math.abs(p.x - 865) < 110) {
+        return { label: '[E] 🎫 Osta lippu / Mene jäniksenä', action: () => modals.ticket.classList.remove('hidden') };
+      }
+    } else if (state.zone >= 1 && state.zone <= 7) {
+      if (state.zone > 1 && p.x < 130) {
+        return { label: `[E] ⬅️ Siirry: ${state.zones[state.zone - 1].short}`, action: () => enterZone(state.zone - 1, state.zones[state.zone - 1].width - 140) };
+      }
+      if (state.zone < 7 && p.x > z.width - 130) {
+        return { label: `[E] ➡️ Siirry: ${state.zones[state.zone + 1].short}`, action: () => enterZone(state.zone + 1, 140) };
+      }
+      if (state.zone === 3 && Math.abs(p.x - 700) < 140) {
+        return { label: '[E] 🍽️ Avaa Ravintolavaunun kauppa', action: () => openShop(false) };
+      }
+      if (state.zone === 6 && !z.engineOverclocked && Math.abs(p.x - 780) < 130) {
+        return {
+          label: '[E] ⚙️ Ylikellota moottori (+30 €)',
+          action: () => {
+            z.engineOverclocked = true;
+            state.player.money += 30;
+            playSound('lever');
+            showToast('⚙️ Konehuone ylikellotettu! Löysit 30 €!', 3.2);
+            updateHUD();
+          }
+        };
+      }
+      if (state.zone === 7 && Math.abs(p.x - 950) < 140) {
+        return { label: '[E] 🔥 VEDÄ TURBOVIVUSTA ROVANIEMELLE!', action: startArrivalRovaniemiCutscene };
+      }
+    } else if (state.zone === 8) {
+      if (Math.abs(p.x - 725) < 125) return { label: '[E] 🦌 Avaa Porokahvila & Asekauppa', action: () => openShop(true) };
+      if (Math.abs(p.x - 2040) < 120) return { label: '[E] 🎅 Juttele Joulupukille', action: () => modals.santa.classList.remove('hidden') };
+      if (Math.abs(p.x - 2295) < 110) {
+        return {
+          label: '[E] 🔐 Joulupukin Salainen Paikka (Pääserverit)',
+          action: () => {
+            enterZone(11, 210);
+            showToast('🔐 Astuit Joulupukin Salaiseen Paikkaan! Etsi Pääserverit [E] keskeltä!', 4.5);
+          }
+        };
+      }
+    } else if (state.zone === 9) {
+      if (Math.abs(p.x - 130) < 95) {
+        return {
+          label: '[E] 🔐 Joulupukin Salainen Paikka (Pääserverit)',
+          action: () => {
+            enterZone(11, 210);
+            showToast('🔐 Astuit Joulupukin Salaiseen Paikkaan! Sammuta Pääserverit [E]!', 4.5);
+          }
+        };
+      }
+      if (!z.shuttingDown && !z.serverDone && Math.abs(p.x - 1470) < 105) {
+        return {
+          label: '[E] 🔴 SHUT DOWN SERVERS!',
+          action: () => {
+            z.shuttingDown = true;
+            playSound('alarm');
+            showToast('⚠️ SERVERIT SAMMUVAT! Valot pimenevät 100% → 0%...', 4);
+            updateHUD();
+          }
+        };
+      }
+      if (z.doorOpen && Math.abs(p.x - 1680) < 110) {
+        return {
+          label: '[E] 🚪 Astu uuteen salaiseen oveen!',
+          action: () => {
+            enterZone(10, 180);
+            showToast('🎅 Joulupukki odottaa lahjan kanssa... Ota lahja [E] tai ammu hänet!', 4.5);
+          }
+        };
+      }
+    } else if (state.zone === 10) {
+      const santa = z.npcs.find(n => n.role === 'santa_secret' && n.alive);
+      if (santa && !z.giftTaken && Math.abs(p.x - 810) < 125) {
+        return { label: '[E] 🎁 Ota Joulupukin lahja vastaan', action: startGiftAtomBombCutscene };
+      }
+      if (Math.abs(p.x - 1095) < 95) {
+        return {
+          label: '[E] 🔐 Laskeudu Pääservereille (Salainen Paikka)',
+          action: () => {
+            enterZone(11, 210);
+            showToast('🔐 Olet Joulupukin Salaisessa Paikassa! Sammuta Pääserverit [E]!', 4.5);
+          }
+        };
+      }
+    } else if (state.zone === 11) {
+      if (z.leverPulled && Math.abs(p.x - 125) < 115) {
+        return { label: '[E] 🚪 PAKENE ULOS ENNEN RÄJÄHDYSTÄ!', action: startFactoryExplosionVictoryCutscene };
+      }
+      if (!z.leverPulled && Math.abs(p.x - 125) < 95) {
+        return { label: '[E] ⬅️ Palaa Rovaniemelle', action: () => enterZone(8, 2240) };
+      }
+      if (!z.mainServersOff && Math.abs(p.x - 1080) < 125) {
+        return { label: '[E] 💻 SAMMUTA PÄÄSERVERIT!', action: triggerMainServersShutdown };
+      }
+      if (!z.leverPulled && Math.abs(p.x - 2160) < 125) {
+        return {
+          label: z.mainServersOff
+            ? '[E] 🔴 VEDÄ ISOSTA PUNAISESTA VIVUSTA!'
+            : '[E] 🔒 Iso Punainen Vipu (Sammuta ensin Pääserverit!)',
+          action: () => {
+            if (!z.mainServersOff) {
+              playSound('alarm');
+              showToast('💻 Sammuta ensin Pääserverit keskellä huonetta [E]!', 3.2);
+              return;
+            }
+            pullBigRedLever();
+          }
+        };
+      }
+    }
+    return null;
+  }
+
+  function triggerInteract() {
+    if (!state.started || state.cutscene || anyModalOpen()) return;
+    const inter = getNearbyInteraction();
+    if (inter) inter.action();
+  }
+
+  // =========================================================================
+  // 8. PÄIVITYSSILMUKKA (UPDATE)
+  // =========================================================================
+  function updateCutscene(dt) {
+    const cs = state.cutscene;
+    cs.t += dt;
+
+    if (cs.type === 'rip_kick') {
+      if (cs.t > 2.0 && !cs.hit) {
+        cs.hit = true;
+        playSound('mega_boom');
+        state.shake = 32;
+        state.flash = 0.85;
+        state.flashColor = '#ef4444';
+      }
+      if (cs.t > 3.2) {
+        triggerGameOver('Konduktööri sai Pertin kiinni jäniksenä, potkaisi raiteille ja pikajuna ajoi yli! RIP!', false);
+      }
+    } else if (cs.type === 'arrival_rovaniemi') {
+      if (cs.t > 2.9) {
+        state.cutscene = null;
+        enterZone(8, 190);
+        showToast('❄️ Saavuit Rovaniemelle 66°N! Joulupukki & Salainen Paikka odottavat oikealla!', 4.5);
+      }
+    } else if (cs.type === 'santa_bomb') {
+      if (cs.t > 1.7 && !cs.exploded) {
+        cs.exploded = true;
+        playSound('mega_boom');
+        state.shake = 38;
+        state.flash = 1.0;
+        state.flashColor = '#ffffff';
+      }
+      if (cs.t > 2.9) {
+        triggerGameOver('Myönsit Joulupukille olevasi tuhma rikollinen — Joulupukki räjäytti jättipommin! RIP!', false, 'JOULUPUKIN POMMI — RIP!', '💣');
+      }
+    } else if (cs.type === 'gift_atom_bomb') {
+      if (cs.t > 1.8 && !cs.exploded) {
+        cs.exploded = true;
+        playSound('mega_boom');
+        state.shake = 42;
+        state.flash = 1.0;
+        state.flashColor = '#fef08a';
+      }
+      if (cs.t > 3.2) {
+        triggerVictory(
+          'RIP & LÄPÄISIT PELIN!',
+          '☢️ LOPETUS 1 / 3 — JOULUPUKIN ATOMIPOMMILAHJA',
+          'Sammutit Tonttujen Tehtaan serverit pilkkopimeään, astuit uuteen salaiseen oveen ja avasit Joulupukin lahjan — sisällä oli ATOMIPOMMI! RIP Pertti, mutta läpäisit pelin! (Vinkki: Kokeile myös ampua Pukki tai etsiä Salainen Paikka!)',
+          '☢️'
+        );
+      }
+    } else if (cs.type === 'train_derail_victory') {
+      if (cs.t > 3.6) {
+        triggerVictory(
+          'VOITIT PELIN!!',
+          '🏆 SALAINEN LOPETUS 2 / 3 — MEGAPOMMI & OJA',
+          'Megapommi suisti koko yöjunan lumiseen ojaan suoraan Joulupukin luo! Joulupukki antoi Pertille oman atomipommin — olet virallisesti koko Junasekoilun mestari!',
+          '🏆'
+        );
+      }
+    } else if (cs.type === 'factory_explosion_victory') {
+      if (cs.stage === 0 && cs.t > 0.75) {
+        cs.stage = 1;
+        playSound('mega_boom');
+        state.shake = 42;
+        state.flash = 1.0;
+        state.flashColor = '#ffffff';
+      }
+      if (cs.stage === 1 && cs.t > 1.75) {
+        cs.stage = 2;
+        playSound('boom');
+        state.shake = 26;
+      }
+      if (cs.stage >= 1) {
+        cs.gifts.forEach(g => {
+          g.vy += 420 * dt;
+          g.x += g.vx * dt;
+          g.y += g.vy * dt;
+          g.rot += g.vrot * dt;
+        });
+      }
+      if (cs.t > 4.4) {
+        triggerVictory(
+          'PELI VOITETTU!!',
+          '💥 LOPETUS 3 / 3 — JOULUPUKIN TEHDAS RÄJÄHTI!',
+          'Sammutit Joulupukin Salaisen Paikan pääserverit, taistelit tiesi aseistettujen tonttujen läpi isolle punaiselle vivulle ja pakenit juuri ajoissa 1 minuutin ajastimella! Koko Joulupukin tehdas räjähti taivaan tuuliin revontulten alla — LEGENDAARINEN VOITTO!',
+          '🏆'
+        );
+      }
+    }
+  }
+
+  function update(dt) {
+    globalTime += dt;
+
+    // Lumisade & tähdenlennot
+    snow.forEach(s => {
+      s.x += s.vx * dt;
+      s.y += s.vy * dt;
+      if (s.y > VIEW_H + 8) { s.y = -8; s.x = Math.random() * VIEW_W; }
+      if (s.x < -8) s.x = VIEW_W + 8;
+    });
+    if (Math.random() < dt * 0.25 && shootingStars.length < 2) {
+      shootingStars.push({ x: 180 + Math.random() * 900, y: 20 + Math.random() * 110, vx: -420 - Math.random() * 180, vy: 120 + Math.random() * 80, life: 0.75 });
+    }
+    for (let i = shootingStars.length - 1; i >= 0; i--) {
+      shootingStars[i].x += shootingStars[i].vx * dt;
+      shootingStars[i].y += shootingStars[i].vy * dt;
+      shootingStars[i].life -= dt;
+      if (shootingStars[i].life <= 0) shootingStars.splice(i, 1);
+    }
+
+    if (toastTimer > 0) {
+      toastTimer -= dt;
+      if (toastTimer <= 0) elToast.classList.add('hidden');
+    }
+
+    if (!state || !state.started) return;
+
+    state.shake = Math.max(0, state.shake - dt * 36);
+    state.flash = Math.max(0, state.flash - dt * 1.9);
+    state.muzzleLight = Math.max(0, state.muzzleLight - dt);
+
+    if (state.cutscene) {
+      updateCutscene(dt);
+      return;
+    }
+    if (anyModalOpen()) return;
+
+    const p = state.player;
+    const z = state.zones[state.zone];
+
+    // Pelaajan ajastimet
+    p.attackCooldown = Math.max(0, p.attackCooldown - dt);
+    p.recoil = Math.max(0, p.recoil - dt * 7);
+    p.hitFlash = Math.max(0, p.hitFlash - dt);
+    if (p.speedBoostTimer > 0) {
+      p.speedBoostTimer = Math.max(0, p.speedBoostTimer - dt);
+      if (p.speedBoostTimer === 0) updateHUD();
+    }
+    if (p.reloadTimer > 0) {
+      p.reloadTimer -= dt;
+      if (p.reloadTimer <= 0) {
+        const w = p.weapon;
+        const need = p.maxMag[w] - p.mag[w];
+        const take = Math.min(need, p.reserve[w]);
+        p.mag[w] += take;
+        p.reserve[w] -= take;
+        updateHUD();
+      }
+    }
+
+    // Tonttujen Tehtaan serverien sammutus (100% -> 0%)
+    if (state.zone === 9 && z.shuttingDown && !z.serverDone) {
+      z.serverPct = Math.max(0, z.serverPct - dt * 18);
+      if (z.serverPct <= 0) {
+        z.serverDone = true;
+        z.shuttingDown = false;
+        z.doorOpen = true;
+        state.shake = 16;
+        playSound('alarm');
+        showToast('🌑 SERVERIT 0%! PILKKOPIMEÄÄ! Uusi salainen ovi avautui oikealle [E]!', 5);
+      }
+      updateHUD();
+    }
+
+    // Joulupukin Salaisen Paikan hälytys, lisäaallot & 1 minuutin pakotimeri
+    if (state.zone === 11) {
+      if (z.alarmActive) {
+        z.sirenCooldown -= dt;
+        if (z.sirenCooldown <= 0) {
+          z.sirenCooldown = z.leverPulled ? 1.7 : 2.9;
+          playSound('siren');
+        }
+        if (!z.leverPulled && z.wavesSpawned < 3) {
+          z.reinforceTimer -= dt;
+          if (z.reinforceTimer <= 0) {
+            z.reinforceTimer = 11.0;
+            z.wavesSpawned++;
+            spawnArmedElvesWave(z);
+            showToast('🚨 LISÄÄ ASEISTETTUJA TONTTUJA SAAPUI!', 2.6);
+          }
+        }
+      }
+      if (z.leverPulled && z.escapeTimer > 0) {
+        z.escapeTimer = Math.max(0, z.escapeTimer - dt);
+        const secNow = Math.ceil(z.escapeTimer);
+        if (secNow !== z.lastTickSec) {
+          z.lastTickSec = secNow;
+          if (secNow <= 15 && secNow > 0) playSound('tick');
+          updateHUD();
+        }
+        if (Math.random() < dt * 2.4) {
+          state.shake = Math.max(state.shake, 7 + (60 - z.escapeTimer) * 0.14);
+          spawnParticles(state.camX + Math.random() * VIEW_W, 56, '#f97316', 6, 130, 380);
+        }
+        if (p.x <= 108) {
+          startFactoryExplosionVictoryCutscene();
+          return;
+        }
+        if (z.escapeTimer <= 0) {
+          playSound('mega_boom');
+          state.flash = 1.0;
+          state.flashColor = '#ffffff';
+          triggerGameOver('1 minuutin aika loppui! Joulupukin salainen tehdas räjähti Pertin ollessa vielä sisällä! RIP!', false, 'AIKA LOPPUI — RIP!', '💥');
+          return;
+        }
+      }
+    }
+
+    // Pelaajan liikkuminen
+    const moveLeft = keys['KeyA'] || keys['ArrowLeft'] || touchState.left;
+    const moveRight = keys['KeyD'] || keys['ArrowRight'] || touchState.right;
+    const sprint = keys['ShiftLeft'] || keys['ShiftRight'];
+    const baseSpeed = (sprint ? 320 : 215) * (p.speedBoostTimer > 0 ? 1.4 : 1);
+
+    p.vx = 0;
+    if (moveLeft) { p.vx = -baseSpeed; p.dir = -1; }
+    if (moveRight) { p.vx = baseSpeed; p.dir = 1; }
+    p.x = Math.max(48, Math.min(z.width - 48, p.x + p.vx * dt));
+
+    if (Math.abs(p.vx) > 10) {
+      p.walkPhase += dt * (sprint ? 15 : 10);
+      if (Math.random() < dt * (sprint ? 11 : 6)) {
+        const isOut = state.zone === 0 || state.zone === 8;
+        spawnParticles(p.x, GROUND_Y - 2, isOut ? '#e0f2fe' : 'rgba(148,163,184,0.45)', 2, 42, 90);
+        if (isOut) state.footprints.push({ x: p.x, life: 4.5 });
+      }
+    }
+    if ((state.zone === 0 || state.zone === 8) && Math.random() < dt * 1.4) {
+      state.particles.push({
+        x: p.x + p.dir * 12,
+        y: p.y - 68,
+        vx: p.dir * (18 + Math.random() * 14),
+        vy: -22 - Math.random() * 12,
+        r: 3 + Math.random() * 2.5,
+        color: 'rgba(224, 242, 254, 0.45)',
+        life: 0.9,
+        maxLife: 0.9,
+        gravity: -8
+      });
+    }
+    for (let i = state.footprints.length - 1; i >= 0; i--) {
+      state.footprints[i].life -= dt;
+      if (state.footprints[i].life <= 0) state.footprints.splice(i, 1);
+    }
+
+    // Sarjatuli SMG / Mega-ase
+    if ((mouse.down || keys['Space']) && (p.weapon === 5 || p.weapon === 7)) {
+      useWeapon();
+    }
+
+    // Kamera
+    const targetCam = Math.max(0, Math.min(z.width - VIEW_W, p.x - VIEW_W * 0.5));
+    state.camX += (targetCam - state.camX) * Math.min(1, dt * 8);
+
+    // Interaktiovihje
+    const inter = getNearbyInteraction();
+    if (inter) {
+      elInteract.textContent = inter.label;
+      elInteract.classList.remove('hidden');
+    } else {
+      elInteract.classList.add('hidden');
+    }
+
+    // Kerättävät esineet
+    z.pickups.forEach(pk => {
+      if (!pk.taken && Math.abs(p.x - pk.x) < 38) {
+        pk.taken = true;
+        playSound('pickup');
+        if (pk.type === 'money') { p.money += 20; showToast('💶 Löysit 20 €!'); }
+        else if (pk.type === 'bomb') { p.bombs += 2; showToast('💣 Löysit 2 Dynamiittia!'); }
+        else if (pk.type === 'medkit') { p.hp = Math.min(p.maxHp, p.hp + 45); showToast('❤️ Löysit ensiapupakkauksen (+45 HP)!'); }
+        else if (pk.type === 'ammo') { p.reserve[3] += 18; p.reserve[4] += 8; p.reserve[5] += 36; showToast('🔫 Löysit ammuksia!'); }
+        updateHUD();
+      }
+    });
+
+    // Pukin henki (Zone 10)
+    if (state.ghost) {
+      const g = state.ghost;
+      const dx = p.x - g.x;
+      const dy = (p.y - 44) - g.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      g.x += (dx / dist) * g.speed * dt;
+      g.y += (dy / dist) * g.speed * dt;
+      if (dist < 34) {
+        playSound('mega_boom');
+        triggerGameOver('Joulupukin kostonhimoinen henki tappoi Pertin! Mutta MEGA-ASE (7) ja MEGAPOMMI (8) jäivät auki — palaa junaan räjäyttämään Megapommi!', true, 'PUKIN HENKI TAPPOI!', '👻');
+        return;
+      }
+    }
+
+    // NPC:t
+    z.npcs.forEach(n => {
+      if (!n.alive) return;
+      n.hitFlash = Math.max(0, n.hitFlash - dt);
+      if (n.speechTimer > 0) n.speechTimer -= dt;
+
+      if (n.role === 'fleeing_elf') {
+        n.dir = -1;
+        n.vx = -295;
+        n.x += n.vx * dt;
+        n.walkPhase += dt * 16;
+        if (n.x < 95) n.alive = false;
+      } else if (n.role === 'armed_elf') {
+        const dx = p.x - n.x;
+        n.dir = dx >= 0 ? 1 : -1;
+        if (Math.abs(dx) > 250) {
+          n.vx = n.dir * 150;
+          n.x = Math.max(120, Math.min(z.width - 100, n.x + n.vx * dt));
+          n.walkPhase += dt * 11;
+        } else if (Math.abs(dx) < 130) {
+          n.vx = -n.dir * 90;
+          n.x = Math.max(120, Math.min(z.width - 100, n.x + n.vx * dt));
+          n.walkPhase += dt * 9;
+        } else {
+          n.vx = 0;
+        }
+        n.shootTimer -= dt;
+        if (n.shootTimer <= 0 && Math.abs(dx) < 620) {
+          n.shootTimer = 0.95 + Math.random() * 0.45;
+          playSound('shoot');
+          state.bullets.push({ x: n.x + n.dir * 22, y: n.y - 44, vx: n.dir * 590, vy: (Math.random() - 0.5) * 28, dmg: 10, fromPlayer: false, mega: false, elfLaser: true, life: 1.4 });
+        }
+      } else if (n.role === 'conductor' && state.ticket === 'stowaway' && Math.abs(n.x - p.x) < 380) {
+        n.dir = p.x >= n.x ? 1 : -1;
+        n.vx = n.dir * 155;
+        n.x += n.vx * dt;
+        n.walkPhase += dt * 11;
+        n.speech = 'JÄNIS!! ULOS JUNASTA!!';
+        n.speechTimer = 1;
+        if (Math.abs(n.x - p.x) < 42) {
+          startStowawayRipCutscene();
+        }
+      } else if (n.role === 'police' && (state.policeWanted || n.panic)) {
+        const dx = p.x - n.x;
+        n.dir = dx >= 0 ? 1 : -1;
+        if (Math.abs(dx) > 220) {
+          n.vx = n.dir * 135;
+          n.x = Math.max(80, Math.min(z.width - 80, n.x + n.vx * dt));
+          n.walkPhase += dt * 10;
+        } else {
+          n.vx = 0;
+        }
+        n.shootTimer -= dt;
+        if (n.shootTimer <= 0 && Math.abs(dx) < 520) {
+          n.shootTimer = 1.15;
+          playSound('shoot');
+          state.bullets.push({ x: n.x + n.dir * 22, y: n.y - 45, vx: n.dir * 560, vy: 0, dmg: 10, fromPlayer: false, mega: false, life: 1.3 });
+        }
+      } else if (n.panic) {
+        const away = n.x >= p.x ? 1 : -1;
+        n.dir = away;
+        n.vx = away * 170;
+        n.x = Math.max(70, Math.min(z.width - 70, n.x + n.vx * dt));
+        n.walkPhase += dt * 13;
+      } else if (n.role === 'passenger' || n.role === 'elf') {
+        if (Math.abs(n.x - n.homeX) > 90) n.dir *= -1;
+        n.vx = n.dir * 38;
+        n.x += n.vx * dt;
+        n.walkPhase += dt * 5;
+      }
+    });
+
+    // Luodit
+    for (let i = state.bullets.length - 1; i >= 0; i--) {
+      const b = state.bullets[i];
+      b.x += b.vx * dt;
+      b.y += b.vy * dt;
+      b.life -= dt;
+      let hit = false;
+
+      if (b.fromPlayer) {
+        for (const n of z.npcs) {
+          if (n.alive && Math.abs(b.x - n.x) < 24 && b.y > n.y - 84 * n.scale && b.y < n.y) {
+            damageNPC(n, b.dmg);
+            if (!b.mega) { hit = true; break; }
+          }
+        }
+      } else {
+        if (Math.abs(b.x - p.x) < 22 && b.y > p.y - 78 && b.y < p.y) {
+          hurtPlayer(b.dmg, b.elfLaser ? 'Aseistetut erikoistontut pysäyttivät Pertin Salaisessa Paikassa!' : 'Lapin poliisi pysäytti Pertin rikollisen matkan!');
+          hit = true;
+        }
+      }
+      if (hit || b.life <= 0 || b.x < 0 || b.x > z.width || b.y > GROUND_Y + 6) {
+        state.bullets.splice(i, 1);
+      }
+    }
+
+    // Pommit
+    for (let i = state.bombs.length - 1; i >= 0; i--) {
+      const bm = state.bombs[i];
+      bm.vy += 560 * dt;
+      bm.x = Math.max(30, Math.min(z.width - 30, bm.x + bm.vx * dt));
+      bm.y += bm.vy * dt;
+      if (bm.y >= GROUND_Y - 10) {
+        bm.y = GROUND_Y - 10;
+        bm.vy *= -0.32;
+        bm.vx *= 0.7;
+      }
+      bm.fuse -= dt;
+      if (bm.fuse <= 0) {
+        const bx = bm.x, by = bm.y, isMega = bm.isMega;
+        state.bombs.splice(i, 1);
+        explodeAt(bx, by, isMega);
+      }
+    }
+
+    // Partikkelit, hylsyt, viiltokaaret
+    for (let i = state.particles.length - 1; i >= 0; i--) {
+      const pt = state.particles[i];
+      pt.vy += pt.gravity * dt;
+      pt.x += pt.vx * dt;
+      pt.y += pt.vy * dt;
+      pt.life -= dt;
+      if (pt.life <= 0) state.particles.splice(i, 1);
+    }
+    for (let i = state.casings.length - 1; i >= 0; i--) {
+      const cs = state.casings[i];
+      cs.vy += 520 * dt;
+      cs.x += cs.vx * dt;
+      cs.y += cs.vy * dt;
+      cs.rot += cs.vrot * dt;
+      if (cs.y >= GROUND_Y - 2) { cs.y = GROUND_Y - 2; cs.vy *= -0.35; cs.vx *= 0.75; }
+      cs.life -= dt;
+      if (cs.life <= 0) state.casings.splice(i, 1);
+    }
+    for (let i = state.slashArcs.length - 1; i >= 0; i--) {
+      state.slashArcs[i].life -= dt;
+      if (state.slashArcs[i].life <= 0) state.slashArcs.splice(i, 1);
+    }
+  }
+
+  // =========================================================================
+  // 9. PIIRTOAPUFUNKTIOT & ULTRA-KAUNIS GRAFIIKKA
+  // =========================================================================
+  function roundRect(x, y, w, h, r) {
+    const rad = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + rad, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rad);
+    ctx.arcTo(x + w, y + h, x, y + h, rad);
+    ctx.arcTo(x, y + h, x, y, rad);
+    ctx.arcTo(x, y, x + w, y, rad);
+    ctx.closePath();
+  }
+
+  function drawSpeechBubble(x, y, text) {
+    ctx.save();
+    ctx.font = '800 11px Inter, sans-serif';
+    const w = Math.max(66, ctx.measureText(text).width + 20);
+    roundRect(x - w / 2, y - 24, w, 24, 9);
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.45)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    ctx.fillStyle = '#f8fafc';
+    ctx.textAlign = 'center';
+    ctx.fillText(text, x, y - 8);
+    ctx.restore();
+  }
+
+  function drawSnowySpruce(x, baseY, h, color = '#17363e') {
+    const w = h * 0.46;
+    ctx.fillStyle = '#291d16';
+    ctx.fillRect(x - 4, baseY - 16, 8, 16);
+    for (let i = 0; i < 4; i++) {
+      const ty = baseY - 14 - i * (h * 0.21);
+      const tw = w * (1 - i * 0.2);
+      const th = h * 0.34;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(x, ty - th);
+      ctx.lineTo(x - tw, ty);
+      ctx.lineTo(x + tw, ty);
+      ctx.closePath();
+      ctx.fill();
+      // Lumipeite oksien päällä
+      ctx.fillStyle = 'rgba(226, 242, 255, 0.78)';
+      ctx.beginPath();
+      ctx.moveTo(x, ty - th);
+      ctx.lineTo(x - tw * 0.55, ty - th * 0.42);
+      ctx.lineTo(x, ty - th * 0.54);
+      ctx.lineTo(x + tw * 0.55, ty - th * 0.42);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  function drawSkyAndAurora(width, isRovaniemi = false) {
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+    skyGrad.addColorStop(0, '#01030b');
+    skyGrad.addColorStop(0.28, '#040e26');
+    skyGrad.addColorStop(0.62, isRovaniemi ? '#0b2545' : '#091d38');
+    skyGrad.addColorStop(0.88, isRovaniemi ? '#153e63' : '#133254');
+    skyGrad.addColorStop(1, isRovaniemi ? '#1f4e73' : '#1a3f63');
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, width, GROUND_Y);
+
+    // Linnunrata-sumu
+    const nebula = ctx.createRadialGradient(width * 0.32, 105, 20, width * 0.32, 105, 480);
+    nebula.addColorStop(0, 'rgba(56, 189, 248, 0.13)');
+    nebula.addColorStop(0.45, 'rgba(139, 92, 246, 0.08)');
+    nebula.addColorStop(0.75, 'rgba(52, 211, 153, 0.05)');
+    nebula.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = nebula;
+    ctx.fillRect(0, 0, width, 360);
+
+    // Tähdet
+    stars.forEach((s, idx) => {
+      const sx = (s.x + (isRovaniemi ? state.camX * 0.85 : 0)) % width;
+      const alpha = 0.42 + 0.58 * Math.sin(globalTime * s.speed + s.phase);
+      const tint = idx % 5 === 0 ? `rgba(186, 230, 253, ${alpha.toFixed(2)})`
+                 : (idx % 7 === 0 ? `rgba(254, 240, 138, ${alpha.toFixed(2)})`
+                 : `rgba(248, 250, 252, ${alpha.toFixed(2)})`);
+      ctx.fillStyle = tint;
+      ctx.beginPath();
+      ctx.arc(sx, s.y, s.r, 0, Math.PI * 2);
+      ctx.fill();
+      if (s.cross && alpha > 0.62) {
+        ctx.strokeStyle = `rgba(224, 242, 254, ${(alpha * 0.65).toFixed(2)})`;
+        ctx.lineWidth = 1.1;
+        ctx.beginPath();
+        ctx.moveTo(sx - 7, s.y); ctx.lineTo(sx + 7, s.y);
+        ctx.moveTo(sx, s.y - 7); ctx.lineTo(sx, s.y + 7);
+        ctx.stroke();
+      }
+    });
+
+    // Tähdenlennot
+    shootingStars.forEach(st => {
+      const grad = ctx.createLinearGradient(st.x, st.y, st.x - st.vx * 0.19, st.y - st.vy * 0.19);
+      grad.addColorStop(0, `rgba(255,255,255,${Math.min(1, st.life * 1.5)})`);
+      grad.addColorStop(0.35, `rgba(125,211,252,${st.life * 0.85})`);
+      grad.addColorStop(1, 'rgba(56,189,248,0)');
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 2.6;
+      ctx.beginPath();
+      ctx.moveTo(st.x, st.y);
+      ctx.lineTo(st.x - st.vx * 0.19, st.y - st.vy * 0.19);
+      ctx.stroke();
+    });
+
+    // Revontuliverhot pystysäteillä
+    const ribbons = isRovaniemi ? 4 : 3;
+    for (let r = 0; r < ribbons; r++) {
+      const baseY = 54 + r * 32;
+      const topCol = r === 0 ? 'rgba(52, 211, 153, 0.36)' : (r === 1 ? 'rgba(56, 189, 248, 0.28)' : (r === 2 ? 'rgba(192, 132, 252, 0.24)' : 'rgba(45, 212, 191, 0.22)'));
+      const midCol = r === 0 ? 'rgba(16, 185, 129, 0.20)' : (r === 1 ? 'rgba(99, 102, 241, 0.14)' : 'rgba(232, 121, 249, 0.14)');
+      ctx.beginPath();
+      ctx.moveTo(0, baseY);
+      for (let x = 0; x <= width; x += 38) {
+        const y = baseY + Math.sin(x * 0.0042 + globalTime * (0.55 + r * 0.18) + r * 2.1) * 30
+                        + Math.cos(x * 0.0095 - globalTime * 0.42 + r) * 12;
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(width, baseY + 155);
+      ctx.lineTo(0, baseY + 155);
+      ctx.closePath();
+      const ag = ctx.createLinearGradient(0, baseY - 38, 0, baseY + 155);
+      ag.addColorStop(0, 'rgba(0,0,0,0)');
+      ag.addColorStop(0.26, topCol);
+      ag.addColorStop(0.62, midCol);
+      ag.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = ag;
+      ctx.fill();
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      for (let rx = 18 + r * 28; rx < width; rx += 76) {
+        const waveY = baseY + Math.sin(rx * 0.0042 + globalTime * (0.55 + r * 0.18) + r * 2.1) * 28;
+        const rayH = 78 + Math.sin(globalTime * 1.8 + rx * 0.03) * 26;
+        const rg = ctx.createLinearGradient(rx, waveY - 28, rx, waveY + rayH);
+        rg.addColorStop(0, 'rgba(0,0,0,0)');
+        rg.addColorStop(0.35, r % 2 === 0 ? 'rgba(110, 231, 183, 0.15)' : 'rgba(165, 180, 252, 0.12)');
+        rg.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = rg;
+        ctx.fillRect(rx - 8, waveY - 28, 16, rayH + 28);
+      }
+      ctx.restore();
+    }
+
+    // Täysikuu + jääkidekehä + kraatterit
+    const moonX = isRovaniemi ? state.camX * 0.88 + 1010 : 1030;
+    const moonY = 78;
+    const outerHalo = ctx.createRadialGradient(moonX, moonY, 24, moonX, moonY, 175);
+    outerHalo.addColorStop(0, 'rgba(254, 249, 195, 0.44)');
+    outerHalo.addColorStop(0.4, 'rgba(186, 230, 253, 0.16)');
+    outerHalo.addColorStop(0.75, 'rgba(56, 189, 248, 0.05)');
+    outerHalo.addColorStop(1, 'rgba(254, 249, 195, 0)');
+    ctx.fillStyle = outerHalo;
+    ctx.beginPath(); ctx.arc(moonX, moonY, 175, 0, Math.PI * 2); ctx.fill();
+
+    ctx.strokeStyle = 'rgba(224, 242, 254, 0.14)';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(moonX, moonY, 64, 0, Math.PI * 2); ctx.stroke();
+
+    const moonGrad = ctx.createRadialGradient(moonX - 7, moonY - 7, 4, moonX, moonY, 29);
+    moonGrad.addColorStop(0, '#ffffff');
+    moonGrad.addColorStop(0.55, '#fef9c3');
+    moonGrad.addColorStop(1, '#fde68a');
+    ctx.fillStyle = moonGrad;
+    ctx.beginPath(); ctx.arc(moonX, moonY, 28, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(180, 130, 30, 0.14)';
+    ctx.beginPath(); ctx.arc(moonX - 8, moonY - 5, 6.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(moonX + 9, moonY + 7, 4.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(moonX + 4, moonY - 11, 3.2, 0, Math.PI * 2); ctx.fill();
+
+    // Kaksikerroksiset tunturit
+    ctx.fillStyle = 'rgba(10, 27, 50, 0.78)';
+    ctx.beginPath();
+    ctx.moveTo(0, 418);
+    for (let mx = 0; mx <= width + 240; mx += 240) {
+      ctx.lineTo(mx + 120, 302 + Math.sin(mx * 0.011) * 28);
+      ctx.lineTo(mx + 240, 418);
+    }
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = 'rgba(19, 44, 72, 0.85)';
+    ctx.beginPath();
+    ctx.moveTo(0, 422);
+    for (let mx = -80; mx <= width + 220; mx += 210) {
+      const peakY = 330 + Math.cos(mx * 0.013) * 22;
+      ctx.lineTo(mx + 105, peakY);
+      ctx.lineTo(mx + 210, 422);
+    }
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(224, 242, 254, 0.24)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let mx = -80; mx <= width + 220; mx += 210) {
+      const peakY = 330 + Math.cos(mx * 0.013) * 22;
+      ctx.moveTo(mx + 82, peakY + 22);
+      ctx.lineTo(mx + 105, peakY);
+      ctx.lineTo(mx + 128, peakY + 22);
+    }
+    ctx.stroke();
+
+    const mist = ctx.createLinearGradient(0, 340, 0, 435);
+    mist.addColorStop(0, 'rgba(186, 230, 253, 0)');
+    mist.addColorStop(0.65, 'rgba(186, 230, 253, 0.14)');
+    mist.addColorStop(1, 'rgba(224, 242, 254, 0.24)');
+    ctx.fillStyle = mist;
+    ctx.fillRect(0, 340, width, 95);
+  }
+
+  // --- ZONE 0: ALKUPEÄRINEN KAUNIS LÄHTÖASEMA ---
+  function drawDepartureStation() {
+    drawSkyAndAurora(VIEW_W, false);
+
+    // Kaksikerroksinen kuusimetsä
+    [40, 125, 220, 315, 420, 620, 710, 795].forEach((tx, idx) => drawSnowySpruce(tx, 418, 108 + (idx % 3) * 22, '#102833'));
+    [75, 170, 265, 370, 665, 745].forEach((tx, idx) => drawSnowySpruce(tx, 425, 92 + (idx % 2) * 18, '#193b45'));
+
+    // Lumihanki takana
+    const snowG = ctx.createLinearGradient(0, 405, 0, GROUND_Y);
+    snowG.addColorStop(0, '#eef6ff');
+    snowG.addColorStop(1, '#cbd5e1');
+    ctx.fillStyle = snowG;
+    ctx.fillRect(0, 412, VIEW_W, 60);
+
+    // Tumma asfalttilaituri & keltainen turvaviiva
+    const platG = ctx.createLinearGradient(0, GROUND_Y, 0, VIEW_H);
+    platG.addColorStop(0, '#334155');
+    platG.addColorStop(0.25, '#1e293b');
+    platG.addColorStop(1, '#0f172a');
+    ctx.fillStyle = platG;
+    ctx.fillRect(0, GROUND_Y, VIEW_W, VIEW_H - GROUND_Y);
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillRect(0, GROUND_Y + 3, VIEW_W, 4);
+
+    // LÄHTÖASEMA — LAITURI 1 kyltti (vihreä reunus)
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(130, 242, 8, 230);
+    ctx.fillRect(322, 242, 8, 230);
+    roundRect(96, 188, 268, 62, 12);
+    ctx.fillStyle = '#091426'; ctx.fill();
+    ctx.strokeStyle = '#34d399'; ctx.lineWidth = 3; ctx.stroke();
+    ctx.fillStyle = '#ffffff'; ctx.font = '900 16px "Space Grotesk", sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('LÄHTÖASEMA — LAITURI 1', 230, 214);
+    ctx.fillStyle = '#facc15'; ctx.font = '800 12px Inter, sans-serif';
+    ctx.fillText('YÖJUNA ROVANIEMELLE ➜', 230, 236);
+
+    // Puupenkki
+    ctx.fillStyle = '#78350f';
+    roundRect(245, 434, 88, 10, 3); ctx.fill();
+    roundRect(245, 449, 88, 8, 3); ctx.fill();
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(256, 449, 6, 23); ctx.fillRect(316, 449, 6, 23);
+
+    // Katulamput lämpimillä valokeiloilla
+    [230, 690].forEach(lx => {
+      const cone = ctx.createLinearGradient(lx, 185, lx, GROUND_Y + 12);
+      cone.addColorStop(0, 'rgba(254, 240, 138, 0.36)');
+      cone.addColorStop(0.65, 'rgba(254, 240, 138, 0.12)');
+      cone.addColorStop(1, 'rgba(254, 240, 138, 0)');
+      ctx.fillStyle = cone;
+      ctx.beginPath();
+      ctx.moveTo(lx - 8, 185); ctx.lineTo(lx + 8, 185);
+      ctx.lineTo(lx + 115, GROUND_Y + 12); ctx.lineTo(lx - 115, GROUND_Y + 12);
+      ctx.closePath(); ctx.fill();
+
+      ctx.fillStyle = '#64748b';
+      ctx.fillRect(lx - 3.5, 185, 7, GROUND_Y - 185);
+      ctx.save();
+      ctx.shadowColor = '#fde047'; ctx.shadowBlur = 22;
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath(); ctx.arc(lx, 182, 10, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    });
+
+    // Lumikattoinen LIPUNMYYNTI-kioski
+    roundRect(432, 248, 168, 224, 14);
+    ctx.fillStyle = '#1e293b'; ctx.fill();
+    ctx.strokeStyle = '#475569'; ctx.lineWidth = 2; ctx.stroke();
+    // Lumikatto + jääpuikot
+    roundRect(422, 238, 188, 18, 9);
+    ctx.fillStyle = '#f1f5f9'; ctx.fill();
+    ctx.fillStyle = '#bae6fd';
+    for (let ix = 434; ix < 602; ix += 18) {
+      ctx.beginPath(); ctx.moveTo(ix, 256); ctx.lineTo(ix + 4, 267 + (ix % 6)); ctx.lineTo(ix + 8, 256); ctx.closePath(); ctx.fill();
+    }
+    // Kyltti
+    roundRect(452, 266, 128, 26, 7);
+    ctx.fillStyle = '#f59e0b'; ctx.fill();
+    ctx.fillStyle = '#0f172a'; ctx.font = '900 12px "Space Grotesk", sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('🎫 LIPUNMYYNTI', 516, 284);
+    // Lämmin ikkuna + myyjä sisällä
+    roundRect(458, 304, 116, 78, 10);
+    ctx.fillStyle = '#fef3c7'; ctx.fill();
+    ctx.fillStyle = '#1d4ed8'; roundRect(498, 344, 36, 38, 6); ctx.fill();
+    ctx.fillStyle = '#fed7aa'; ctx.beginPath(); ctx.arc(516, 331, 13, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#e2e8f0'; ctx.font = '700 12px Inter, sans-serif';
+    ctx.fillText('Rovaniemi: 25 €', 516, 412);
+    ctx.fillStyle = '#34d399'; ctx.font = '800 12px Inter, sans-serif';
+    ctx.fillText('[E] Osta / Jänis', 516, 434);
+
+    // Kaksikerroksinen VR-YÖJUNA oikealla
+    roundRect(806, 188, 360, 284, 24);
+    ctx.fillStyle = '#f1f5f9'; ctx.fill();
+    ctx.fillStyle = '#059669';
+    ctx.fillRect(806, 355, 360, 117);
+    ctx.fillStyle = '#047857';
+    ctx.fillRect(806, 396, 360, 24);
+    // Katto
+    roundRect(816, 178, 345, 16, 8);
+    ctx.fillStyle = '#475569'; ctx.fill();
+    // Lämpimät ylä- ja alaikkunat
+    for (let c = 0; c < 3; c++) {
+      roundRect(850 + c * 92, 214, 68, 42, 8);
+      ctx.fillStyle = '#fef08a'; ctx.fill();
+      if (c > 0) {
+        roundRect(850 + c * 92, 276, 68, 44, 8);
+        ctx.fillStyle = '#fef08a'; ctx.fill();
+      }
+    }
+    // Junan ovi & vihreä nappi
+    roundRect(830, 266, 80, 200, 12);
+    ctx.fillStyle = '#0f172a'; ctx.fill();
+    roundRect(844, 284, 52, 86, 6);
+    ctx.fillStyle = '#475569'; ctx.fill();
+    ctx.fillStyle = '#34d399';
+    ctx.beginPath(); ctx.arc(898, 384, 7, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // --- ZONES 1-7: UPEAT YLELLISET JUNAVAUNUT ---
+  function drawTrainCar(zoneId) {
+    const z = state.zones[zoneId];
+    const w = z.width;
+    const sway = Math.sin(globalTime * 4.2) * 1.4;
+    ctx.save();
+    ctx.translate(0, sway);
+
+    // Vaunun perusvärit
+    const wallTop = zoneId === 3 ? '#3b1d14' : (zoneId === 5 ? '#26142e' : (zoneId === 6 ? '#1e293b' : '#16243a'));
+    const wallBot = zoneId === 3 ? '#22100b' : (zoneId === 5 ? '#150c1d' : (zoneId === 6 ? '#0f172a' : '#0d1726'));
+    const wg = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+    wg.addColorStop(0, wallTop);
+    wg.addColorStop(1, wallBot);
+    ctx.fillStyle = wg;
+    ctx.fillRect(0, 0, w, GROUND_Y);
+
+    // Katto & LED-valonauha
+    ctx.fillStyle = '#090f1d';
+    ctx.fillRect(0, 0, w, 58);
+    ctx.fillStyle = zoneId === 5 ? '#facc15' : (zoneId === 6 ? '#f97316' : '#38bdf8');
+    ctx.fillRect(0, 56, w, 3);
+
+    // Lattia & matto
+    ctx.fillStyle = zoneId === 5 ? '#450a0a' : (zoneId === 3 ? '#29150e' : '#1e293b');
+    ctx.fillRect(0, GROUND_Y, w, VIEW_H - GROUND_Y);
+    if (zoneId === 5) {
+      ctx.fillStyle = '#b45309';
+      ctx.fillRect(0, GROUND_Y + 6, w, 5);
+    }
+
+    // Panoraamaikkunat ohikiitävällä talvimaisemalla (paitsi konehuone & ohjaamo)
+    if (zoneId <= 5) {
+      const winCount = Math.floor((w - 280) / 260);
+      for (let i = 0; i < winCount; i++) {
+        const wx = 175 + i * 260;
+        const wy = 112;
+        const ww = 210;
+        const wh = 158;
+        ctx.save();
+        roundRect(wx, wy, ww, wh, 14);
+        ctx.clip();
+        const sg = ctx.createLinearGradient(wx, wy, wx, wy + wh);
+        sg.addColorStop(0, '#020617');
+        sg.addColorStop(0.55, '#0c2749');
+        sg.addColorStop(1, '#1e40af');
+        ctx.fillStyle = sg;
+        ctx.fillRect(wx, wy, ww, wh);
+
+        // Revontuli ikkunassa
+        ctx.fillStyle = 'rgba(52, 211, 153, 0.28)';
+        ctx.fillRect(wx, wy + 18 + Math.sin(globalTime + i) * 8, ww, 26);
+
+        // Ohikiitävät lumikuuset
+        const speed = state.turboActive ? 420 : 190;
+        for (let t = 0; t < 4; t++) {
+          const tx = wx + ww - ((globalTime * speed + t * 75 + i * 33) % (ww + 60)) + 20;
+          drawSnowySpruce(tx, wy + wh + 6, 72, '#0f2933');
+        }
+        // Lumihanki
+        ctx.fillStyle = '#e2e8f0';
+        ctx.fillRect(wx, wy + wh - 16, ww, 16);
+        ctx.restore();
+
+        // Ikkunan kehys
+        roundRect(wx, wy, ww, wh, 14);
+        ctx.strokeStyle = zoneId === 5 ? '#eab308' : '#475569';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+
+        // Matkatavarahylly yllä
+        ctx.fillStyle = '#64748b';
+        ctx.fillRect(wx - 6, 86, ww + 12, 6);
+      }
+
+      // Kattovalot & valokeilat
+      for (let lx = 260; lx < w - 160; lx += 280) {
+        const cone = ctx.createLinearGradient(lx, 58, lx, GROUND_Y);
+        cone.addColorStop(0, zoneId === 5 ? 'rgba(250, 204, 21, 0.22)' : 'rgba(254, 243, 199, 0.16)');
+        cone.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = cone;
+        ctx.beginPath();
+        ctx.moveTo(lx - 26, 58); ctx.lineTo(lx + 26, 58);
+        ctx.lineTo(lx + 125, GROUND_Y); ctx.lineTo(lx - 125, GROUND_Y);
+        ctx.closePath(); ctx.fill();
+      }
+    }
+
+    // Vaunukohtaiset sisustukset
+    if (zoneId === 1 || zoneId === 2 || zoneId === 4) {
+      const seatCol = zoneId === 4 ? '#0f766e' : '#059669';
+      for (let sx = 210; sx < w - 220; sx += 220) {
+        roundRect(sx, 360, 44, 110, 10); ctx.fillStyle = seatCol; ctx.fill();
+        roundRect(sx + 92, 360, 44, 110, 10); ctx.fillStyle = seatCol; ctx.fill();
+        roundRect(sx + 44, 405, 48, 12, 4); ctx.fillStyle = '#cbd5e1'; ctx.fill();
+      }
+    } else if (zoneId === 3) {
+      // Ravintolavaunun baaritiski & kynttiläpöydät
+      roundRect(530, 340, 340, 132, 14);
+      ctx.fillStyle = '#451a03'; ctx.fill();
+      ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 3; ctx.stroke();
+      ctx.fillStyle = '#fef08a'; ctx.font = '900 18px "Space Grotesk", sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('🍽️ RAVINTOLAVAUNU [E]', 700, 380);
+      // Espressokone
+      roundRect(620, 294, 58, 46, 6); ctx.fillStyle = '#94a3b8'; ctx.fill();
+      // Pullavitriini
+      roundRect(700, 300, 86, 40, 6); ctx.fillStyle = 'rgba(186,230,253,0.35)'; ctx.fill();
+      ctx.fillStyle = '#d97706'; ctx.beginPath(); ctx.arc(725, 326, 9, 0, Math.PI * 2); ctx.arc(755, 326, 9, 0, Math.PI * 2); ctx.fill();
+    } else if (zoneId === 5) {
+      // VIP kristallikruunut & kultapylväät
+      for (let cx = 280; cx < w - 200; cx += 300) {
+        ctx.fillStyle = '#eab308';
+        ctx.fillRect(cx - 2, 58, 4, 24);
+        ctx.beginPath(); ctx.arc(cx, 92, 16, 0, Math.PI * 2); ctx.fill();
+        roundRect(cx - 50, 368, 100, 104, 14); ctx.fillStyle = '#7f1d1d'; ctx.fill();
+      }
+    } else if (zoneId === 6) {
+      // Konehuone: rattaat, kupariputket & plasmamoottori
+      ctx.fillStyle = '#b45309';
+      ctx.fillRect(0, 92, w, 16);
+      ctx.fillRect(0, 128, w, 10);
+      roundRect(620, 220, 320, 252, 18);
+      ctx.fillStyle = z.engineDestroyed ? '#450a0a' : '#1e293b'; ctx.fill();
+      ctx.strokeStyle = z.engineOverclocked ? '#38bdf8' : '#f59e0b'; ctx.lineWidth = 4; ctx.stroke();
+      // Hehkuvat sylinterit
+      for (let i = 0; i < 3; i++) {
+        const pulse = 0.5 + 0.5 * Math.sin(globalTime * (z.engineOverclocked ? 12 : 5) + i);
+        roundRect(654 + i * 90, 260, 54, 150, 10);
+        ctx.fillStyle = z.engineDestroyed ? '#7f1d1d' : `rgba(56, 189, 248, ${(0.35 + pulse * 0.5).toFixed(2)})`;
+        ctx.fill();
+      }
+      ctx.fillStyle = '#fef08a'; ctx.font = '900 16px "Space Grotesk", sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(z.engineDestroyed ? '💥 MOOTTORI RÄJÄHTÄNYT' : '⚙️ PÄÄMOOTTORI [E]', 780, 206);
+    } else if (zoneId === 7) {
+      // Kapteenin ohjaamo: 3D-raiteet tuulilasissa & TURBOVIPU
+      ctx.save();
+      roundRect(620, 86, 520, 235, 22);
+      ctx.clip();
+      ctx.fillStyle = '#030b1c'; ctx.fillRect(620, 86, 520, 235);
+      // 3D lumiset raiteet
+      ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(880, 195); ctx.lineTo(660, 325); ctx.moveTo(880, 195); ctx.lineTo(1100, 325); ctx.stroke();
+      // Ajovalokeila
+      const beam = ctx.createLinearGradient(880, 320, 880, 195);
+      beam.addColorStop(0, 'rgba(254, 240, 138, 0.35)');
+      beam.addColorStop(1, 'rgba(254, 240, 138, 0)');
+      ctx.fillStyle = beam;
+      ctx.beginPath(); ctx.moveTo(740, 325); ctx.lineTo(1020, 325); ctx.lineTo(895, 195); ctx.lineTo(865, 195); ctx.closePath(); ctx.fill();
+      ctx.restore();
+      roundRect(620, 86, 520, 235, 22); ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 4; ctx.stroke();
+
+      // Ohjauspöytä + TURBOVIPU
+      roundRect(840, 338, 240, 134, 14);
+      ctx.fillStyle = '#0f172a'; ctx.fill();
+      ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 3; ctx.stroke();
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath(); ctx.arc(955, 325, 16, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fef08a'; ctx.font = '900 14px "Space Grotesk", sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('🔥 TURBO ROVANIEMELLE [E]', 960, 375);
+    }
+
+    // Vaunun ovet vasemmalla ja oikealla
+    if (zoneId > 1) {
+      roundRect(24, 238, 76, 234, 10); ctx.fillStyle = '#0f172a'; ctx.fill();
+      ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2.5; ctx.stroke();
+      ctx.fillStyle = '#7dd3fc'; ctx.font = '800 11px Inter, sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('⬅️ [E]', 62, 228);
+    }
+    if (zoneId < 7) {
+      roundRect(w - 100, 238, 76, 234, 10); ctx.fillStyle = '#0f172a'; ctx.fill();
+      ctx.strokeStyle = '#34d399'; ctx.lineWidth = 2.5; ctx.stroke();
+      ctx.fillStyle = '#6ee7b7'; ctx.font = '800 11px Inter, sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('➡️ [E]', w - 62, 228);
+    }
+
+    ctx.restore();
+  }
+
+  // --- ZONE 8: ROVANIEMI 66°N & PAJAKYLÄ ---
+  function drawRovaniemiWorld() {
+    drawSkyAndAurora(2400, true);
+
+    // Kuusimetsä taustalla
+    for (let tx = 60; tx < 2360; tx += 145) {
+      drawSnowySpruce(tx, 430, 105 + (tx % 35), '#13313b');
+    }
+
+    // Luminen maa
+    const gGrad = ctx.createLinearGradient(0, GROUND_Y - 14, 0, VIEW_H);
+    gGrad.addColorStop(0, '#f8fafc');
+    gGrad.addColorStop(0.45, '#e2e8f0');
+    gGrad.addColorStop(1, '#94a3b8');
+    ctx.fillStyle = gGrad;
+    ctx.fillRect(0, GROUND_Y - 12, 2400, VIEW_H - GROUND_Y + 12);
+
+    // Katulamput & värikkäät jouluvaloketjut
+    const lampXs = [240, 560, 960, 1420, 1820, 2180];
+    lampXs.forEach((lx, idx) => {
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(lx - 4, 210, 8, GROUND_Y - 210);
+      const lg = ctx.createRadialGradient(lx, 206, 4, lx, 206, 80);
+      lg.addColorStop(0, 'rgba(254, 240, 138, 0.55)');
+      lg.addColorStop(1, 'rgba(254, 240, 138, 0)');
+      ctx.fillStyle = lg;
+      ctx.beginPath(); ctx.arc(lx, 206, 80, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath(); ctx.arc(lx, 206, 8, 0, Math.PI * 2); ctx.fill();
+
+      if (idx < lampXs.length - 1) {
+        const nx = lampXs[idx + 1];
+        const cols = ['#ef4444', '#34d399', '#38bdf8', '#facc15', '#c084fc'];
+        for (let s = 1; s <= 9; s++) {
+          const t = s / 10;
+          const bx = lx + (nx - lx) * t;
+          const by = 212 + Math.sin(t * Math.PI) * 36;
+          ctx.fillStyle = cols[(s + idx) % cols.length];
+          ctx.beginPath(); ctx.arc(bx, by, 3.5, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+    });
+
+    // Porokahvila & Asekauppa (x=725)
+    roundRect(590, 274, 270, 198, 12);
+    ctx.fillStyle = '#5c2d16'; ctx.fill();
+    ctx.strokeStyle = '#78350f'; ctx.lineWidth = 3; ctx.stroke();
+    // Lumikatto + savupiippu
+    ctx.fillStyle = '#334155'; ctx.fillRect(805, 205, 26, 70);
+    ctx.fillStyle = '#f8fafc';
+    ctx.beginPath(); ctx.moveTo(570, 282); ctx.lineTo(725, 212); ctx.lineTo(880, 282); ctx.closePath(); ctx.fill();
+    roundRect(620, 326, 92, 68, 8); ctx.fillStyle = '#fef08a'; ctx.fill();
+    roundRect(740, 344, 68, 128, 8); ctx.fillStyle = '#3b1c0c'; ctx.fill();
+    roundRect(606, 250, 238, 30, 8); ctx.fillStyle = '#0f172a'; ctx.fill();
+    ctx.fillStyle = '#fde047'; ctx.font = '900 13px "Space Grotesk", sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('🦌 POROKAHVILA & ASEKAUPPA [E]', 725, 270);
+
+    // Napapiirin linja 66°33'N (x=1260)
+    const npGlow = ctx.createLinearGradient(1260, 140, 1260, GROUND_Y);
+    npGlow.addColorStop(0, 'rgba(56, 189, 248, 0)');
+    npGlow.addColorStop(0.5, 'rgba(56, 189, 248, 0.32)');
+    npGlow.addColorStop(1, 'rgba(52, 211, 153, 0.45)');
+    ctx.fillStyle = npGlow;
+    ctx.fillRect(1248, 140, 24, GROUND_Y - 140);
+    roundRect(1170, 240, 180, 34, 9); ctx.fillStyle = '#0c4a6e'; ctx.fill();
+    ctx.fillStyle = '#e0f2fe'; ctx.font = '900 13px "Space Grotesk", sans-serif';
+    ctx.fillText('❄️ NAPAPIIRI 66°33\'N', 1260, 262);
+
+    // Porot (mukaan lukien Petteri Punakuono)
+    reindeerList.forEach(rd => {
+      const rx = rd.x + Math.sin(globalTime * 0.6 + rd.phase) * 28;
+      const ry = GROUND_Y - 4;
+      ctx.save();
+      ctx.translate(rx, ry);
+      ctx.scale(rd.dir, 1);
+      ctx.fillStyle = '#78350f';
+      roundRect(-22, -34, 44, 20, 8); ctx.fill();
+      ctx.fillRect(-16, -16, 5, 16); ctx.fillRect(10, -16, 5, 16);
+      ctx.fillRect(14, -46, 14, 16);
+      // Sarvet
+      ctx.strokeStyle = '#d6d3d1'; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(20, -46); ctx.lineTo(14, -62); ctx.moveTo(22, -46); ctx.lineTo(28, -62); ctx.stroke();
+      // Nenä
+      ctx.fillStyle = rd.rudolph ? '#ef4444' : '#1e293b';
+      ctx.beginPath(); ctx.arc(30, -39, rd.rudolph ? 4.5 : 3, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    });
+
+    // Joulupukin Pajakylä (x=2080)
+    roundRect(1910, 260, 280, 212, 14);
+    ctx.fillStyle = '#7f1d1d'; ctx.fill();
+    ctx.fillStyle = '#f8fafc';
+    ctx.beginPath(); ctx.moveTo(1890, 268); ctx.lineTo(2050, 190); ctx.lineTo(2210, 268); ctx.closePath(); ctx.fill();
+    roundRect(1955, 252, 250, 34, 9); ctx.fillStyle = '#0b1222'; ctx.fill();
+    ctx.strokeStyle = '#facc15'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = '#fef08a'; ctx.font = '900 14px "Space Grotesk", sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('🎅 JOULUPUKIN PAJAKYLÄ', 2080, 274);
+
+    // SALAINEN BUNKKERI-SISÄÄNKÄYNTI JOULUPUKIN SALAISEEN PAIKKAAN (x=2295)
+    const bGlow = ctx.createRadialGradient(2295, 390, 12, 2295, 390, 110);
+    bGlow.addColorStop(0, 'rgba(244, 63, 94, 0.45)');
+    bGlow.addColorStop(0.55, 'rgba(56, 189, 248, 0.22)');
+    bGlow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = bGlow;
+    ctx.beginPath(); ctx.arc(2295, 390, 110, 0, Math.PI * 2); ctx.fill();
+
+    roundRect(2244, 310, 102, 162, 12);
+    ctx.fillStyle = '#0f172a'; ctx.fill();
+    ctx.strokeStyle = '#f43f5e'; ctx.lineWidth = 3; ctx.stroke();
+    roundRect(2258, 336, 74, 134, 8);
+    ctx.fillStyle = '#1e293b'; ctx.fill();
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillRect(2268, 354, 54, 8);
+    ctx.fillStyle = '#fda4af'; ctx.font = '900 11px Inter, sans-serif';
+    ctx.fillText('🔐 SALAINEN', 2295, 294);
+    ctx.fillText('PAIKKA [E]', 2295, 306);
+  }
+
+  // --- ZONE 9: TONTTUJEN TEHDAS ---
+  function drawElfFactory() {
+    const z = state.zones[9];
+    const power = z.serverPct / 100;
+
+    ctx.fillStyle = '#111827';
+    ctx.fillRect(0, 0, 1800, GROUND_Y);
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(0, GROUND_Y, 1800, VIEW_H - GROUND_Y);
+
+    // Kattovalot (himmentyvät serverien sammuessa)
+    if (power > 0.05) {
+      for (let lx = 260; lx < 1600; lx += 340) {
+        const cone = ctx.createLinearGradient(lx, 50, lx, GROUND_Y);
+        cone.addColorStop(0, `rgba(254, 240, 138, ${(0.28 * power).toFixed(2)})`);
+        cone.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = cone;
+        ctx.beginPath();
+        ctx.moveTo(lx - 24, 50); ctx.lineTo(lx + 24, 50);
+        ctx.lineTo(lx + 150, GROUND_Y); ctx.lineTo(lx - 150, GROUND_Y);
+        ctx.closePath(); ctx.fill();
+      }
+    }
+
+    // Liikkuva lahjaliukuhihna
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(240, 355, 740, 24);
+    ctx.fillStyle = '#475569';
+    for (let x = 260; x < 960; x += 90) ctx.fillRect(x, 379, 10, 93);
+    const beltSpeed = power > 0.05 ? 70 * power : 0;
+    const giftColors = ['#ef4444', '#10b981', '#3b82f6', '#f59e0b'];
+    for (let i = 0; i < 6; i++) {
+      const gx = 250 + ((i * 125 + globalTime * beltSpeed) % 700);
+      roundRect(gx, 320, 34, 34, 6);
+      ctx.fillStyle = giftColors[i % 4]; ctx.fill();
+      ctx.fillStyle = '#fef08a'; ctx.fillRect(gx + 14, 320, 6, 34); ctx.fillRect(gx, 334, 34, 6);
+    }
+
+    // Ovi Joulupukin Salaiseen Paikkaan vasemmalla (x=130)
+    const sg = ctx.createRadialGradient(130, 360, 12, 130, 360, 125);
+    sg.addColorStop(0, 'rgba(56, 189, 248, 0.45)');
+    sg.addColorStop(0.55, 'rgba(244, 63, 94, 0.22)');
+    sg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = sg;
+    ctx.beginPath(); ctx.arc(130, 360, 125, 0, Math.PI * 2); ctx.fill();
+    roundRect(82, 242, 96, 230, 12);
+    ctx.fillStyle = '#0f172a'; ctx.fill();
+    ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 3; ctx.stroke();
+    ctx.fillStyle = '#7dd3fc'; ctx.font = '900 11px "Space Grotesk", sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('🔐 SALAINEN PAIKKA', 130, 224);
+    ctx.fillText('PÄÄSERVERIT [E]', 130, 236);
+
+    // Serveriräkit & SHUT DOWN SERVERS -nappi (x=1470)
+    [1060, 1180, 1300].forEach((sx, idx) => {
+      roundRect(sx, 180, 90, 292, 8);
+      ctx.fillStyle = '#0f172a'; ctx.fill();
+      ctx.strokeStyle = '#334155'; ctx.lineWidth = 2; ctx.stroke();
+      for (let r = 0; r < 8; r++) {
+        ctx.fillStyle = power > 0.05 && Math.sin(globalTime * 8 + idx + r) > 0 ? '#22c55e' : '#334155';
+        ctx.fillRect(sx + 14, 200 + r * 32, 62, 10);
+      }
+    });
+
+    roundRect(1425, 322, 90, 150, 10);
+    ctx.fillStyle = '#1e293b'; ctx.fill();
+    ctx.fillStyle = z.serverDone ? '#450a0a' : '#ef4444';
+    ctx.beginPath(); ctx.arc(1470, 366, 20, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#fca5a5'; ctx.font = '900 11px Inter, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('SHUT DOWN', 1470, 304);
+    ctx.fillText('SERVERS [E]', 1470, 316);
+
+    // Uusi hohtava salainen ovi oikealla (avautuu kun serverit 0%)
+    if (z.doorOpen) {
+      const dg = ctx.createRadialGradient(1680, 355, 12, 1680, 355, 160);
+      dg.addColorStop(0, 'rgba(250, 204, 21, 0.72)');
+      dg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = dg;
+      ctx.beginPath(); ctx.arc(1680, 355, 160, 0, Math.PI * 2); ctx.fill();
+      roundRect(1632, 232, 96, 240, 14);
+      ctx.fillStyle = '#451a03'; ctx.fill();
+      ctx.strokeStyle = '#facc15'; ctx.lineWidth = 4; ctx.stroke();
+      ctx.fillStyle = '#fef08a'; ctx.font = '900 13px "Space Grotesk", sans-serif';
+      ctx.fillText('🚪 SALAINEN OVI [E]', 1680, 218);
+    }
+
+    // Pilkkopimeä peite kun serverit sammuvat!
+    if (power < 0.98) {
+      const darkAlpha = (1 - power) * 0.84;
+      ctx.fillStyle = `rgba(2, 4, 12, ${darkAlpha.toFixed(2)})`;
+      ctx.fillRect(0, 0, 1800, VIEW_H);
+      // Taskulamppu / hehku Pertin ympärillä pimeässä
+      const pg = ctx.createRadialGradient(state.player.x, state.player.y - 40, 25, state.player.x, state.player.y - 40, 210);
+      pg.addColorStop(0, 'rgba(254, 240, 138, 0.22)');
+      pg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = pg;
+      ctx.beginPath(); ctx.arc(state.player.x, state.player.y - 40, 210, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  // --- ZONE 10: JOULUPUKIN SALAINEN HUONE ---
+  function drawSecretSantaRoom() {
+    const z = state.zones[10];
+    const bg = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+    bg.addColorStop(0, '#2a0f12');
+    bg.addColorStop(1, '#16080a');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, 1200, GROUND_Y);
+    ctx.fillStyle = '#3b1414';
+    ctx.fillRect(0, GROUND_Y, 1200, VIEW_H - GROUND_Y);
+
+    // Revontuli-ikkuna
+    roundRect(180, 110, 210, 160, 14);
+    ctx.fillStyle = '#071c36'; ctx.fill();
+    ctx.fillStyle = 'rgba(52, 211, 153, 0.35)'; ctx.fillRect(190, 140, 190, 32);
+    ctx.strokeStyle = '#b45309'; ctx.lineWidth = 6; ctx.stroke();
+
+    // Loimuava takka
+    roundRect(470, 255, 190, 217, 12);
+    ctx.fillStyle = '#475569'; ctx.fill();
+    roundRect(508, 325, 114, 147, 18);
+    ctx.fillStyle = '#0f172a'; ctx.fill();
+    const fl = Math.sin(globalTime * 14) * 6;
+    ctx.fillStyle = '#f97316';
+    ctx.beginPath(); ctx.moveTo(525, 470); ctx.lineTo(565, 365 + fl); ctx.lineTo(605, 470); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#fef08a';
+    ctx.beginPath(); ctx.moveTo(542, 470); ctx.lineTo(565, 400 - fl * 0.5); ctx.lineTo(588, 470); ctx.closePath(); ctx.fill();
+
+    // Joulukuusi
+    drawSnowySpruce(340, GROUND_Y, 190, '#14532d');
+
+    // Lahjapaketti Joulupukin edessä (x=805)
+    if (!z.giftTaken) {
+      const gx = 782, gy = GROUND_Y - 46;
+      roundRect(gx, gy, 46, 46, 8);
+      ctx.fillStyle = '#dc2626'; ctx.fill();
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(gx + 19, gy, 8, 46);
+      ctx.fillRect(gx, gy + 19, 46, 8);
+    }
+
+    // Ovi Pääservereille oikeassa reunassa (x=1095)
+    roundRect(1048, 250, 92, 222, 12);
+    ctx.fillStyle = '#0f172a'; ctx.fill();
+    ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 3; ctx.stroke();
+    ctx.fillStyle = '#7dd3fc'; ctx.font = '900 11px Inter, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('🔐 PÄÄSERVERIT [E]', 1094, 238);
+  }
+
+  // --- ZONE 11: JOULUPUKIN SALAINEN PAIKKA (PÄÄSERVERIT & ISO PUNAINEN VIPU) ---
+  function drawSecretMainframeBunker() {
+    const z = state.zones[11];
+    const alarmFlash = z.alarmActive ? (0.5 + 0.5 * Math.sin(globalTime * (z.leverPulled ? 15 : 8))) : 0;
+
+    const bg = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+    bg.addColorStop(0, z.alarmActive ? '#17060c' : '#030b1a');
+    bg.addColorStop(0.55, z.alarmActive ? '#220a14' : '#0a1930');
+    bg.addColorStop(1, '#091324');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, 2400, GROUND_Y);
+
+    // Teräskaaret & valonauhat
+    for (let ax = 180; ax < 2400; ax += 260) {
+      const archG = ctx.createLinearGradient(ax - 18, 0, ax + 18, 0);
+      archG.addColorStop(0, '#0f172a');
+      archG.addColorStop(0.5, '#334155');
+      archG.addColorStop(1, '#0f172a');
+      ctx.fillStyle = archG;
+      ctx.fillRect(ax - 16, 42, 32, GROUND_Y - 42);
+      ctx.fillStyle = z.alarmActive ? `rgba(239,68,68,${(0.35 + alarmFlash * 0.65).toFixed(2)})` : 'rgba(56,189,248,0.45)';
+      ctx.fillRect(ax - 3, 72, 6, GROUND_Y - 120);
+    }
+
+    ctx.fillStyle = '#040812';
+    ctx.fillRect(0, 0, 2400, 56);
+    ctx.strokeStyle = z.mainServersOff ? '#ef4444' : '#22d3ee';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(0, 54); ctx.lineTo(2400, 54); ctx.stroke();
+
+    // Hälytysvalot / siniset valokeilat
+    for (let lx = 260; lx < 2300; lx += 340) {
+      if (z.alarmActive) {
+        const sweep = Math.sin(globalTime * (z.leverPulled ? 9 : 5) + lx) * 140;
+        const cone = ctx.createLinearGradient(lx, 56, lx + sweep, GROUND_Y);
+        cone.addColorStop(0, `rgba(239, 68, 68, ${(0.34 + alarmFlash * 0.25).toFixed(2)})`);
+        cone.addColorStop(1, 'rgba(239, 68, 68, 0)');
+        ctx.fillStyle = cone;
+        ctx.beginPath();
+        ctx.moveTo(lx - 14, 56); ctx.lineTo(lx + 14, 56);
+        ctx.lineTo(lx + sweep + 145, GROUND_Y); ctx.lineTo(lx + sweep - 145, GROUND_Y);
+        ctx.closePath(); ctx.fill();
+        ctx.save();
+        ctx.shadowColor = '#ef4444'; ctx.shadowBlur = 20;
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath(); ctx.arc(lx, 58, 9, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      } else {
+        const cone = ctx.createLinearGradient(lx, 56, lx, GROUND_Y);
+        cone.addColorStop(0, 'rgba(56, 189, 248, 0.22)');
+        cone.addColorStop(1, 'rgba(56, 189, 248, 0)');
+        ctx.fillStyle = cone;
+        ctx.beginPath();
+        ctx.moveTo(lx - 26, 56); ctx.lineTo(lx + 26, 56);
+        ctx.lineTo(lx + 150, GROUND_Y); ctx.lineTo(lx - 150, GROUND_Y);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#bae6fd';
+        roundRect(lx - 24, 52, 48, 7, 3); ctx.fill();
+      }
+    }
+
+    // Lattia & jäähdytysritilä
+    const flG = ctx.createLinearGradient(0, GROUND_Y, 0, VIEW_H);
+    flG.addColorStop(0, '#1e293b');
+    flG.addColorStop(0.35, '#0f172a');
+    flG.addColorStop(1, '#020617');
+    ctx.fillStyle = flG;
+    ctx.fillRect(0, GROUND_Y, 2400, VIEW_H - GROUND_Y);
+
+    const riverCol = z.alarmActive ? `rgba(239,68,68,${(0.35 + alarmFlash * 0.45).toFixed(2)})` : 'rgba(34,211,238,0.45)';
+    ctx.fillStyle = riverCol;
+    ctx.fillRect(0, GROUND_Y + 20, 2400, 14);
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
+    for (let gx = 0; gx < 2400; gx += 28) ctx.fillRect(gx, GROUND_Y + 20, 10, 14);
+
+    // VASEMMALLA: ULOSKÄYNTI (x=125)
+    const exitOpen = z.leverPulled;
+    const exitGlow = ctx.createRadialGradient(125, 355, 16, 125, 355, exitOpen ? 190 : 110);
+    exitGlow.addColorStop(0, exitOpen ? 'rgba(52, 211, 153, 0.75)' : 'rgba(56, 189, 248, 0.25)');
+    exitGlow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = exitGlow;
+    ctx.beginPath(); ctx.arc(125, 355, exitOpen ? 190 : 110, 0, Math.PI * 2); ctx.fill();
+
+    roundRect(66, 224, 118, 248, 14);
+    ctx.fillStyle = exitOpen ? '#064e3b' : '#1e293b'; ctx.fill();
+    ctx.strokeStyle = exitOpen ? '#34d399' : '#64748b'; ctx.lineWidth = 4; ctx.stroke();
+    if (exitOpen) {
+      roundRect(80, 240, 90, 230, 8);
+      const outG = ctx.createLinearGradient(80, 240, 80, 470);
+      outG.addColorStop(0, '#0ea5e9');
+      outG.addColorStop(0.5, '#34d399');
+      outG.addColorStop(1, '#f8fafc');
+      ctx.fillStyle = outG; ctx.fill();
+    }
+    roundRect(62, 182, 126, 30, 8);
+    ctx.fillStyle = exitOpen ? '#10b981' : '#0f172a'; ctx.fill();
+    ctx.fillStyle = exitOpen ? '#022c22' : '#94a3b8';
+    ctx.font = '900 13px "Space Grotesk", sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(exitOpen ? '🚪 ULOS! PAKENE!' : '🚪 ULOSKÄYNTI', 125, 202);
+
+    // KESKELLÄ: PÄÄSERVERIT (x=1080)
+    const coreGlow = ctx.createRadialGradient(1080, 270, 20, 1080, 270, 280);
+    coreGlow.addColorStop(0, z.mainServersOff ? 'rgba(239, 68, 68, 0.35)' : 'rgba(56, 189, 248, 0.42)');
+    coreGlow.addColorStop(0.6, z.mainServersOff ? 'rgba(127, 29, 29, 0.14)' : 'rgba(16, 185, 129, 0.16)');
+    coreGlow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = coreGlow;
+    ctx.beginPath(); ctx.arc(1080, 270, 280, 0, Math.PI * 2); ctx.fill();
+
+    [855, 965, 1135, 1245].forEach((sx, idx) => {
+      roundRect(sx, 130, 92, 342, 10);
+      ctx.fillStyle = '#090f1d'; ctx.fill();
+      ctx.strokeStyle = z.mainServersOff ? '#7f1d1d' : '#0284c7';
+      ctx.lineWidth = 2.5; ctx.stroke();
+      for (let row = 0; row < 10; row++) {
+        ctx.fillStyle = '#17253a';
+        ctx.fillRect(sx + 10, 148 + row * 30, 72, 20);
+        const blink = !z.mainServersOff && Math.sin(globalTime * 11 + idx * 2.4 + row) > -0.25;
+        ctx.fillStyle = z.mainServersOff ? '#450a0a' : (blink ? '#38bdf8' : '#0f766e');
+        ctx.fillRect(sx + 16, 154 + row * 30, 38, 7);
+        ctx.fillStyle = z.mainServersOff ? '#ef4444' : '#34d399';
+        ctx.beginPath(); ctx.arc(sx + 68, 158 + row * 30, 3.5, 0, Math.PI * 2); ctx.fill();
+      }
+    });
+
+    if (!z.mainServersOff) {
+      ctx.save();
+      ctx.translate(1080, 175 + Math.sin(globalTime * 2.5) * 8);
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.85)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(0, 0, 42, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(0, 0, 42, 16, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(0, 0, Math.abs(Math.cos(globalTime * 1.4)) * 40 + 4, 42, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = 'rgba(52, 211, 153, 0.18)';
+      ctx.beginPath(); ctx.arc(0, 0, 40, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+
+    roundRect(1024, 336, 112, 136, 12);
+    ctx.fillStyle = '#1e293b'; ctx.fill();
+    ctx.strokeStyle = z.mainServersOff ? '#ef4444' : '#38bdf8'; ctx.lineWidth = 3; ctx.stroke();
+    roundRect(1038, 352, 84, 52, 6);
+    ctx.fillStyle = z.mainServersOff ? '#450a0a' : '#082f49'; ctx.fill();
+    ctx.fillStyle = z.mainServersOff ? '#fca5a5' : '#38bdf8';
+    ctx.font = '900 11px monospace'; ctx.textAlign = 'center';
+    ctx.fillText(z.mainServersOff ? 'OFFLINE' : 'ONLINE', 1080, 383);
+    ctx.fillStyle = '#f8fafc'; ctx.font = '900 13px "Space Grotesk", sans-serif';
+    ctx.fillText('💻 PÄÄSERVERIT', 1080, 114);
+    if (!z.mainServersOff) {
+      ctx.fillStyle = '#7dd3fc'; ctx.font = '800 12px Inter, sans-serif';
+      ctx.fillText('[E] SAMMUTA PÄÄSERVERIT', 1080, 326);
+    }
+
+    // OIKEASSA PÄÄSSÄ: ISO PUNAINEN VIPU (x=2160)
+    const leverGlow = ctx.createRadialGradient(2160, 345, 16, 2160, 345, 195);
+    leverGlow.addColorStop(0, z.leverPulled ? 'rgba(250, 204, 21, 0.55)' : (z.mainServersOff ? 'rgba(239, 68, 68, 0.65)' : 'rgba(148, 163, 184, 0.2)'));
+    leverGlow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = leverGlow;
+    ctx.beginPath(); ctx.arc(2160, 345, 195, 0, Math.PI * 2); ctx.fill();
+
+    roundRect(2082, 426, 156, 46, 8);
+    ctx.fillStyle = '#1e293b'; ctx.fill();
+    for (let hx = 2088; hx < 2230; hx += 24) {
+      ctx.fillStyle = (hx % 48 === 0) ? '#facc15' : '#0f172a';
+      ctx.fillRect(hx, 456, 14, 14);
+    }
+    roundRect(2122, 332, 76, 98, 12);
+    ctx.fillStyle = '#334155'; ctx.fill();
+    ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 3; ctx.stroke();
+
+    ctx.save();
+    ctx.translate(2160, 368);
+    ctx.rotate(z.leverPulled ? 0.92 : -0.78);
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillRect(-7, -110, 14, 110);
+    ctx.save();
+    ctx.shadowColor = '#ef4444'; ctx.shadowBlur = 24;
+    ctx.fillStyle = '#dc2626';
+    ctx.beginPath(); ctx.arc(0, -116, 26, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    ctx.beginPath(); ctx.arc(-8, -124, 7, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    ctx.restore();
+
+    roundRect(2044, 194, 232, 44, 10);
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.92)'; ctx.fill();
+    ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.fillStyle = '#fca5a5'; ctx.font = '900 13px "Space Grotesk", sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(z.leverPulled ? '💥 ITSETUHO AKTIVOITU!' : '🔴 ISO PUNAINEN VIPU', 2160, 214);
+    ctx.fillStyle = '#fef08a'; ctx.font = '800 11px Inter, sans-serif';
+    ctx.fillText(z.leverPulled ? 'JUOKSE VASEMMALLE ULOS!' : (z.mainServersOff ? '[E] VEDÄ VIVUSTA NYT!' : 'Sammuta ensin Pääserverit'), 2160, 230);
+  }
+
+  // --- HAHMOJEN NIVELLETTY PIIRTO ---
+  function drawCharacterRig(c, isPlayer) {
+    const scale = isPlayer ? 1 : (c.scale || 1);
+    const moving = Math.abs(c.vx) > 8;
+    const legSwing = moving ? Math.sin(c.walkPhase) * 10 : 0;
+    const bob = moving ? Math.abs(Math.cos(c.walkPhase)) * 3.5 : Math.sin(globalTime * 2.8) * 1.2;
+    const lean = moving ? c.dir * 0.07 : 0;
+
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.scale(scale, scale);
+
+    // Maavarjo
+    ctx.fillStyle = 'rgba(2, 6, 23, 0.42)';
+    ctx.beginPath(); ctx.ellipse(0, 2, 18, 5, 0, 0, Math.PI * 2); ctx.fill();
+
+    // Jalat & kengät
+    ctx.strokeStyle = isPlayer ? '#1e293b' : (c.pants || '#0f172a');
+    ctx.lineWidth = 6.5;
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-5, -24); ctx.lineTo(-5 - legSwing, -3); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(5, -24); ctx.lineTo(5 + legSwing, -3); ctx.stroke();
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath(); ctx.ellipse(-5 - legSwing + c.dir * 2, -2, 5.5, 3, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(5 + legSwing + c.dir * 2, -2, 5.5, 3, 0, 0, Math.PI * 2); ctx.fill();
+
+    ctx.save();
+    ctx.translate(0, -24 - bob);
+    ctx.rotate(lean);
+
+    // Pertin ruskea rikollisreppu
+    if (isPlayer) {
+      roundRect(-c.dir * 16 - 5, -32, 12, 24, 4);
+      ctx.fillStyle = '#78350f'; ctx.fill();
+      ctx.strokeStyle = '#451a03'; ctx.lineWidth = 1.5; ctx.stroke();
+    }
+
+    // Liehuva kaksikerroksinen punainen huivi Pertillä
+    if (isPlayer) {
+      const wave = Math.sin(globalTime * 11 + c.walkPhase) * 6;
+      ctx.strokeStyle = '#b91c1c';
+      ctx.lineWidth = 7;
+      ctx.beginPath();
+      ctx.moveTo(0, -34);
+      ctx.quadraticCurveTo(-c.dir * 16, -29 + wave, -c.dir * 32, -21 - wave * 0.6);
+      ctx.stroke();
+      ctx.strokeStyle = '#f87171';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(0, -35);
+      ctx.quadraticCurveTo(-c.dir * 15, -31 + wave, -c.dir * 29, -23 - wave * 0.5);
+      ctx.stroke();
+    }
+
+    // Takki
+    roundRect(-13, -36, 26, 36, 9);
+    ctx.fillStyle = c.hitFlash > 0 ? '#ffffff' : (isPlayer ? '#0f766e' : c.coat);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.16)';
+    roundRect(-11, -34, 8, 30, 4); ctx.fill();
+    if (isPlayer) {
+      ctx.fillStyle = '#e2e8f0';
+      roundRect(-11, -37, 22, 5, 2.5); ctx.fill();
+    }
+
+    // Pää
+    ctx.fillStyle = '#fed7aa';
+    ctx.beginPath(); ctx.arc(0, -49, 13, 0, Math.PI * 2); ctx.fill();
+    // Talviposket & silmät
+    ctx.fillStyle = 'rgba(248, 113, 113, 0.35)';
+    ctx.beginPath(); ctx.arc(c.dir * 6, -47, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath(); ctx.arc(c.dir * 5, -51, 2.1, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(c.dir * 5.6, -51.7, 0.8, 0, Math.PI * 2); ctx.fill();
+
+    // Päähineet
+    const hat = isPlayer ? 'pertti' : c.hat;
+    if (hat === 'pertti') {
+      ctx.fillStyle = '#dc2626';
+      ctx.beginPath(); ctx.arc(0, -54, 13, Math.PI, 0); ctx.fill();
+      ctx.fillStyle = '#f8fafc';
+      roundRect(-14, -56, 28, 4.5, 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(0, -68, 4.5, 0, Math.PI * 2); ctx.fill();
+    } else if (hat === 'santa') {
+      ctx.fillStyle = '#f8fafc';
+      ctx.beginPath(); ctx.arc(0, -42, 12, 0, Math.PI); ctx.fill();
+      ctx.fillStyle = '#dc2626';
+      ctx.beginPath(); ctx.moveTo(-14, -54); ctx.lineTo(0, -76); ctx.lineTo(14, -54); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#f8fafc';
+      roundRect(-15, -56, 30, 5, 2.5); ctx.fill();
+      ctx.beginPath(); ctx.arc(0, -76, 5, 0, Math.PI * 2); ctx.fill();
+    } else if (hat === 'elf') {
+      ctx.fillStyle = '#16a34a';
+      ctx.beginPath(); ctx.moveTo(-12, -54); ctx.lineTo(0, -74); ctx.lineTo(12, -54); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#facc15'; ctx.beginPath(); ctx.arc(0, -74, 3.5, 0, Math.PI * 2); ctx.fill();
+    } else if (hat === 'tactical_elf') {
+      ctx.fillStyle = '#14532d';
+      ctx.beginPath(); ctx.moveTo(-13, -54); ctx.lineTo(0, -75); ctx.lineTo(13, -54); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath(); ctx.arc(0, -75, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.save();
+      ctx.shadowColor = '#ef4444'; ctx.shadowBlur = 10;
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(c.dir > 0 ? 1 : -11, -53, 10, 4);
+      ctx.restore();
+    } else if (hat === 'conductor' || hat === 'police' || hat === 'captain') {
+      ctx.fillStyle = hat === 'police' ? '#1d4ed8' : '#1e293b';
+      roundRect(-13, -64, 26, 10, 3); ctx.fill();
+      ctx.fillStyle = '#facc15'; ctx.fillRect(-13, -56, 26, 2.5);
+    } else if (hat === 'beanie') {
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath(); ctx.arc(0, -54, 13, Math.PI, 0); ctx.fill();
+    }
+
+    // Aseet kädessä
+    if (isPlayer) {
+      const wSlot = c.weapon;
+      ctx.save();
+      ctx.translate(0, -22);
+      const kick = c.recoil * 6;
+      if (wSlot === 2) {
+        ctx.scale(c.dir, 1);
+        ctx.fillStyle = '#e2e8f0'; ctx.fillRect(10 + kick, -3, 18, 4);
+        ctx.fillStyle = '#78350f'; ctx.fillRect(4 + kick, -4, 7, 6);
+      } else if (wSlot === 3 || wSlot === 4 || wSlot === 5 || wSlot === 7) {
+        ctx.scale(c.dir, 1);
+        const len = wSlot === 3 ? 18 : (wSlot === 4 ? 28 : (wSlot === 5 ? 24 : 32));
+        ctx.fillStyle = wSlot === 7 ? '#c026d3' : '#334155';
+        ctx.fillRect(6 - kick, -5, len, 7);
+        ctx.fillStyle = wSlot === 7 ? '#f0abfc' : '#94a3b8';
+        ctx.fillRect(10 - kick, -5, len - 6, 3);
+      } else if (wSlot === 6 || wSlot === 8) {
+        ctx.scale(c.dir, 1);
+        ctx.fillStyle = wSlot === 8 ? '#facc15' : '#dc2626';
+        roundRect(10, -7, 14, 14, 4); ctx.fill();
+        ctx.fillStyle = '#fef08a'; ctx.beginPath(); ctx.arc(22, -10, 3, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+    } else if (c.role === 'armed_elf') {
+      ctx.save();
+      ctx.translate(0, -21);
+      ctx.scale(c.dir, 1);
+      ctx.fillStyle = '#1e293b'; ctx.fillRect(4, -4, 26, 7);
+      ctx.fillStyle = '#ef4444'; ctx.fillRect(24, -3, 8, 3);
+      ctx.fillStyle = '#475569'; ctx.fillRect(14, 3, 5, 8);
+      ctx.restore();
+    }
+
+    ctx.restore(); // body
+
+    // Latauspalkki Pertin pään päällä
+    if (isPlayer && c.reloadTimer > 0) {
+      const pct = 1 - (c.reloadTimer / c.reloadDuration);
+      roundRect(-22, -104, 44, 7, 3);
+      ctx.fillStyle = '#0f172a'; ctx.fill();
+      roundRect(-21, -103, 42 * pct, 5, 2);
+      ctx.fillStyle = '#38bdf8'; ctx.fill();
+    }
+
+    // NPC puhekupla & HP-palkki
+    if (!isPlayer) {
+      if (c.hp < c.maxHp) {
+        ctx.fillStyle = '#0f172a'; ctx.fillRect(-18, -94, 36, 5);
+        ctx.fillStyle = '#ef4444'; ctx.fillRect(-18, -94, 36 * Math.max(0, c.hp / c.maxHp), 5);
+      }
+      if (c.speech && c.speechTimer > 0) {
+        drawSpeechBubble(0, -98, c.speech);
+      }
+    }
+
+    ctx.restore();
+  }
+
+  // --- VÄLIVIDEOT (OVERLAY) ---
+  function drawCutsceneOverlay() {
+    const cs = state.cutscene;
+    ctx.save();
+    if (cs.type === 'rip_kick') {
+      drawSkyAndAurora(VIEW_W, false);
+      ctx.fillStyle = '#e2e8f0'; ctx.fillRect(0, GROUND_Y, VIEW_W, VIEW_H - GROUND_Y);
+      ctx.fillStyle = '#475569'; ctx.fillRect(0, GROUND_Y + 12, VIEW_W, 8);
+      // Pertti lentää raiteille
+      const px = Math.min(540, 220 + cs.t * 280);
+      drawCharacterRig({ ...state.player, x: px, y: GROUND_Y, vx: 0, dir: 1, walkPhase: 0 }, true);
+      // Pikajuna kiitää yli!
+      if (cs.t > 1.2) {
+        const tx = VIEW_W + 220 - (cs.t - 1.2) * 1400;
+        roundRect(tx, 260, 420, 212, 24); ctx.fillStyle = '#f1f5f9'; ctx.fill();
+        ctx.fillStyle = '#059669'; ctx.fillRect(tx, 380, 420, 92);
+        ctx.fillStyle = '#fef08a'; ctx.beginPath(); ctx.arc(tx + 18, 420, 16, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.fillStyle = '#fca5a5'; ctx.font = '900 32px "Space Grotesk", sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('👞 KONDUKTÖÖRI POTKAISI RAITEILLE!!', VIEW_W / 2, 110);
+    } else if (cs.type === 'arrival_rovaniemi') {
+      drawSkyAndAurora(VIEW_W, true);
+      ctx.fillStyle = '#f1f5f9'; ctx.fillRect(0, GROUND_Y, VIEW_W, VIEW_H - GROUND_Y);
+      const tx = -420 + cs.t * 480;
+      roundRect(tx, 265, 520, 208, 22); ctx.fillStyle = '#f8fafc'; ctx.fill();
+      ctx.fillStyle = '#059669'; ctx.fillRect(tx, 385, 520, 88);
+      ctx.fillStyle = '#fef08a'; ctx.font = '900 34px "Space Grotesk", sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('❄️ SAAPUMINEN ROVANIEMELLE 66°N ❄️', VIEW_W / 2, 120);
+    } else if (cs.type === 'train_derail_victory') {
+      drawSkyAndAurora(VIEW_W, true);
+      ctx.fillStyle = '#f1f5f9'; ctx.fillRect(0, GROUND_Y, VIEW_W, VIEW_H - GROUND_Y);
+      // Kallistunut juna ojassa
+      ctx.save();
+      ctx.translate(320, GROUND_Y - 60);
+      ctx.rotate(-0.24);
+      roundRect(-220, -90, 440, 160, 18); ctx.fillStyle = '#e2e8f0'; ctx.fill();
+      ctx.fillStyle = '#059669'; ctx.fillRect(-220, 10, 440, 60);
+      ctx.restore();
+      drawCharacterRig({ ...state.player, x: 640, y: GROUND_Y, vx: 0, dir: 1, walkPhase: 0 }, true);
+      drawCharacterRig({ x: 840, y: GROUND_Y, vx: 0, dir: -1, coat: '#dc2626', pants: '#991b1b', hat: 'santa', scale: 1.24, hitFlash: 0, walkPhase: 0, hp: 100, maxHp: 100 }, false);
+      roundRect(722, GROUND_Y - 56, 36, 36, 18);
+      ctx.fillStyle = '#facc15'; ctx.fill();
+      ctx.fillStyle = '#0f172a'; ctx.font = '900 18px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('☢️', 740, GROUND_Y - 32);
+      ctx.fillStyle = '#fde047'; ctx.font = '900 32px "Space Grotesk", sans-serif';
+      ctx.fillText('🚂💥 JUNA OJASSA! JOULUPUKKI ANTAA ATOMIPOMMIN!', VIEW_W / 2, 110);
+    } else if (cs.type === 'factory_explosion_victory') {
+      drawSkyAndAurora(VIEW_W, true);
+      const gGrad = ctx.createLinearGradient(0, GROUND_Y, 0, VIEW_H);
+      gGrad.addColorStop(0, '#f1f5f9'); gGrad.addColorStop(1, '#94a3b8');
+      ctx.fillStyle = gGrad;
+      ctx.fillRect(0, GROUND_Y, VIEW_W, VIEW_H - GROUND_Y);
+      [90, 220, 410, 1090].forEach((tx, idx) => drawSnowySpruce(tx, GROUND_Y + 4, 115 + idx * 12, '#13323b'));
+
+      if (cs.stage === 0) {
+        roundRect(680, 250, 310, 222, 12);
+        ctx.fillStyle = '#7f1d1d'; ctx.fill();
+        ctx.fillStyle = '#334155'; ctx.fillRect(720, 175, 34, 80); ctx.fillRect(910, 190, 34, 65);
+        ctx.fillStyle = '#fef08a'; ctx.font = '900 16px "Space Grotesk", sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('🏭 JOULUPUKIN TEHDAS', 835, 310);
+      } else {
+        const exT = Math.max(0.01, cs.t - 0.75);
+        const shockR = Math.min(580, exT * 460);
+        ctx.strokeStyle = `rgba(254, 240, 138, ${Math.max(0, 0.85 - exT * 0.45)})`;
+        ctx.lineWidth = 8;
+        ctx.beginPath(); ctx.arc(835, GROUND_Y - 110, shockR, 0, Math.PI * 2); ctx.stroke();
+
+        const cloudR = Math.min(280, 60 + exT * 175);
+        const mg = ctx.createRadialGradient(835, GROUND_Y - 140 - exT * 35, 25, 835, GROUND_Y - 140 - exT * 35, cloudR);
+        mg.addColorStop(0, '#ffffff');
+        mg.addColorStop(0.28, '#fef08a');
+        mg.addColorStop(0.58, '#f97316');
+        mg.addColorStop(0.85, 'rgba(220, 38, 38, 0.78)');
+        mg.addColorStop(1, 'rgba(127, 29, 29, 0)');
+        ctx.fillStyle = mg;
+        ctx.beginPath(); ctx.arc(835, GROUND_Y - 140 - exT * 35, cloudR, 0, Math.PI * 2); ctx.fill();
+
+        ctx.fillStyle = 'rgba(234, 88, 12, 0.75)';
+        ctx.fillRect(795, GROUND_Y - 160, 80, 160);
+
+        cs.gifts.forEach(g => {
+          ctx.save();
+          ctx.translate(g.x, g.y);
+          ctx.rotate(g.rot);
+          ctx.fillStyle = g.col; ctx.fillRect(-10, -10, 20, 20);
+          ctx.fillStyle = '#fef08a'; ctx.fillRect(-2, -10, 4, 20); ctx.fillRect(-10, -2, 20, 4);
+          ctx.restore();
+        });
+      }
+
+      const perttiX = Math.max(250, 460 - cs.t * 95);
+      drawCharacterRig({ ...state.player, x: perttiX, y: GROUND_Y, vx: cs.t < 1.2 ? -180 : 0, dir: cs.t < 1.2 ? -1 : 1, walkPhase: cs.t * 14 }, true);
+
+      ctx.fillStyle = '#fef08a';
+      ctx.font = '900 34px "Space Grotesk", sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(cs.stage >= 1 ? '💥 JOULUPUKIN TEHDAS RÄJÄHTI! 💥' : '🏃‍♂️💨 PERTTI PÄÄSI ULOS!!', VIEW_W / 2, 115);
+    }
+    ctx.restore();
+  }
+
+  // =========================================================================
+  // 10. PÄÄPIIRTO (RENDER)
+  // =========================================================================
+  function render() {
+    if (!state) return;
+    const scaleX = canvas.width / VIEW_W;
+    const scaleY = canvas.height / VIEW_H;
+
+    ctx.save();
+    ctx.scale(scaleX, scaleY);
+
+    if (state.shake > 0.2) {
+      ctx.translate((Math.random() - 0.5) * state.shake, (Math.random() - 0.5) * state.shake);
+    }
+
+    if (state.cutscene && (state.cutscene.type === 'rip_kick' || state.cutscene.type === 'arrival_rovaniemi' || state.cutscene.type === 'train_derail_victory' || state.cutscene.type === 'factory_explosion_victory')) {
+      drawCutsceneOverlay();
+    } else {
+      ctx.save();
+      ctx.translate(-state.camX, 0);
+
+      if (state.zone === 0) drawDepartureStation();
+      else if (state.zone >= 1 && state.zone <= 7) drawTrainCar(state.zone);
+      else if (state.zone === 8) drawRovaniemiWorld();
+      else if (state.zone === 9) drawElfFactory();
+      else if (state.zone === 10) drawSecretSantaRoom();
+      else if (state.zone === 11) drawSecretMainframeBunker();
+
+      const z = state.zones[state.zone];
+
+      // Jalanjäljet lumessa
+      state.footprints.forEach(fp => {
+        ctx.fillStyle = `rgba(100, 116, 139, ${Math.min(0.35, fp.life * 0.1)})`;
+        ctx.beginPath(); ctx.ellipse(fp.x, GROUND_Y + 3, 6, 2.2, 0, 0, Math.PI * 2); ctx.fill();
+      });
+
+      // Kerättävät esineet
+      z.pickups.forEach(pk => {
+        if (pk.taken) return;
+        const bob = Math.sin(globalTime * 4 + pk.x) * 4;
+        ctx.save();
+        ctx.shadowColor = pk.type === 'money' ? '#facc15' : (pk.type === 'medkit' ? '#34d399' : (pk.type === 'bomb' ? '#ef4444' : '#38bdf8'));
+        ctx.shadowBlur = 14;
+        roundRect(pk.x - 16, GROUND_Y - 34 + bob, 32, 26, 7);
+        ctx.fillStyle = pk.type === 'money' ? '#facc15' : (pk.type === 'medkit' ? '#10b981' : (pk.type === 'bomb' ? '#ef4444' : '#38bdf8'));
+        ctx.fill();
+        ctx.restore();
+        ctx.fillStyle = '#0f172a'; ctx.font = '900 13px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText(pk.type === 'money' ? '€' : (pk.type === 'medkit' ? '+' : (pk.type === 'bomb' ? '💣' : '🔫')), pk.x, GROUND_Y - 16 + bob);
+      });
+
+      // NPC:t
+      z.npcs.forEach(n => { if (n.alive) drawCharacterRig(n, false); });
+
+      // Pukin henki
+      if (state.ghost) {
+        const g = state.ghost;
+        ctx.save();
+        ctx.shadowColor = '#e879f9'; ctx.shadowBlur = 26;
+        ctx.fillStyle = 'rgba(232, 121, 249, 0.78)';
+        ctx.beginPath(); ctx.arc(g.x, g.y, 26, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#ffffff'; ctx.font = '900 24px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('👻', g.x, g.y + 8);
+        ctx.restore();
+      }
+
+      // Suuliekkihehku & Pertti
+      if (state.muzzleLight > 0) {
+        const ml = ctx.createRadialGradient(state.player.x + state.player.dir * 26, state.player.y - 46, 5, state.player.x + state.player.dir * 26, state.player.y - 46, 145);
+        ml.addColorStop(0, `rgba(254, 240, 138, ${(state.muzzleLight * 3.5).toFixed(2)})`);
+        ml.addColorStop(1, 'rgba(254, 240, 138, 0)');
+        ctx.fillStyle = ml;
+        ctx.beginPath(); ctx.arc(state.player.x + state.player.dir * 26, state.player.y - 46, 145, 0, Math.PI * 2); ctx.fill();
+      }
+      drawCharacterRig(state.player, true);
+
+      // Viiltokaaret
+      state.slashArcs.forEach(sa => {
+        ctx.save();
+        ctx.strokeStyle = sa.color;
+        ctx.lineWidth = 4;
+        ctx.globalAlpha = sa.life / 0.16;
+        ctx.beginPath();
+        ctx.arc(sa.x, sa.y, sa.r, sa.dir > 0 ? -0.9 : Math.PI - 0.9, sa.dir > 0 ? 0.9 : Math.PI + 0.9);
+        ctx.stroke();
+        ctx.restore();
+      });
+
+      // Pommit
+      state.bombs.forEach(bm => {
+        ctx.save();
+        ctx.fillStyle = bm.isMega ? '#facc15' : '#dc2626';
+        ctx.beginPath(); ctx.arc(bm.x, bm.y, bm.isMega ? 15 : 10, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#ffffff'; ctx.font = '900 11px monospace'; ctx.textAlign = 'center';
+        ctx.fillText(Math.ceil(bm.fuse), bm.x, bm.y - 16);
+        ctx.restore();
+      });
+
+      // Luodit
+      state.bullets.forEach(b => {
+        ctx.save();
+        const col = b.mega ? '#e879f9' : (b.elfLaser ? '#fb7185' : (b.fromPlayer ? '#fde047' : '#fb7185'));
+        ctx.shadowColor = col; ctx.shadowBlur = b.mega ? 14 : 8;
+        ctx.strokeStyle = col;
+        ctx.lineWidth = b.mega ? 6 : 3.2;
+        ctx.beginPath();
+        ctx.moveTo(b.x, b.y);
+        ctx.lineTo(b.x - b.vx * 0.028, b.y - b.vy * 0.028);
+        ctx.stroke();
+        ctx.restore();
+      });
+
+      // Hylsyt & partikkelit
+      state.casings.forEach(cs => {
+        ctx.save();
+        ctx.translate(cs.x, cs.y); ctx.rotate(cs.rot);
+        ctx.fillStyle = cs.color; ctx.fillRect(-3, -1.5, 6, 3);
+        ctx.restore();
+      });
+      state.particles.forEach(pt => {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, pt.life / pt.maxLife);
+        ctx.fillStyle = pt.color;
+        ctx.beginPath(); ctx.arc(pt.x, pt.y, pt.r, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      });
+
+      ctx.restore(); // camX
+
+      // Zone 11: 1 minuutin pakolaskuri ruudun yläosassa
+      if (state.zone === 11 && state.zones[11].leverPulled && state.zones[11].escapeTimer > 0) {
+        const secs = Math.ceil(state.zones[11].escapeTimer);
+        const mm = String(Math.floor(secs / 60)).padStart(2, '0');
+        const ss = String(secs % 60).padStart(2, '0');
+        const pulse = 0.5 + 0.5 * Math.sin(globalTime * 12);
+        ctx.save();
+        roundRect(VIEW_W / 2 - 220, 18, 440, 62, 16);
+        ctx.fillStyle = `rgba(127, 29, 29, ${(0.78 + pulse * 0.18).toFixed(2)})`;
+        ctx.fill();
+        ctx.strokeStyle = '#fca5a5'; ctx.lineWidth = 3; ctx.stroke();
+        ctx.fillStyle = '#fef08a';
+        ctx.font = '900 26px "Space Grotesk", monospace'; ctx.textAlign = 'center';
+        ctx.fillText(`⏱️ ${mm}:${ss} — ⬅️ PAKENE ULOS!`, VIEW_W / 2, 57);
+        ctx.restore();
+      }
+    }
+
+    // Lumisade ulkotiloissa
+    if (state.zone === 0 || state.zone === 8) {
+      snow.forEach(s => {
+        const spark = 0.65 + 0.35 * Math.sin(globalTime * 3 + s.twinkle);
+        ctx.fillStyle = s.layer === 2 ? `rgba(224,242,254,${(0.38 * spark).toFixed(2)})` : `rgba(248,250,252,${(0.82 * spark).toFixed(2)})`;
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
+      });
+    }
+
+    // Välähdys (räjähdykset)
+    if (state.flash > 0.01) {
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, state.flash);
+      ctx.fillStyle = state.flashColor;
+      ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+      ctx.restore();
+    }
+
+    // Tähtäin
+    if (state.started && !state.cutscene && !anyModalOpen()) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.75)';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.arc(mouse.x, mouse.y, 11, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = '#34d399';
+      ctx.beginPath(); ctx.arc(mouse.x, mouse.y, 2.2, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }
+
+  function gameLoop(now) {
+    const dt = Math.min(0.05, (now - lastFrameTime) / 1000);
+    lastFrameTime = now;
+    update(dt);
+    render();
+    requestAnimationFrame(gameLoop);
+  }
+
+  // =========================================================================
+  // 11. SYÖTTEET & PAINIKKEET
+  // =========================================================================
+  window.addEventListener('keydown', e => {
+    keys[e.code] = true;
+    if (e.code === 'KeyE') triggerInteract();
+    if (e.code === 'KeyR') startReload();
+    if (e.code === 'Space') { e.preventDefault(); useWeapon(); }
+    if (e.code.startsWith('Digit')) {
+      const num = Number(e.code.replace('Digit', ''));
+      if (num >= 1 && num <= 8) selectWeapon(num);
+    }
+  });
+  window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+  canvas.addEventListener('mousemove', e => {
+    const rect = canvas.getBoundingClientRect();
+    mouse.x = ((e.clientX - rect.left) / rect.width) * VIEW_W;
+    mouse.y = ((e.clientY - rect.top) / rect.height) * VIEW_H;
+  });
+  canvas.addEventListener('mousedown', e => {
+    if (e.button === 0) {
+      ensureAudio();
+      mouse.down = true;
+      useWeapon();
+    }
+  });
+  window.addEventListener('mouseup', () => { mouse.down = false; });
+  canvas.addEventListener('wheel', e => {
+    if (!state || !state.started) return;
+    const maxSlot = megaUnlocked ? 8 : 6;
+    let next = state.player.weapon + (e.deltaY > 0 ? 1 : -1);
+    if (next > maxSlot) next = 1;
+    if (next < 1) next = maxSlot;
+    selectWeapon(next);
+  }, { passive: true });
+
+  // Asepalkin napit
+  document.querySelectorAll('.slot-btn').forEach(btn => {
+    btn.addEventListener('click', () => selectWeapon(Number(btn.dataset.slot)));
+  });
+
+  // Kosketusohjaimet
+  function bindHold(id, prop) {
+    const el = document.getElementById(id);
+    const on = e => { e.preventDefault(); touchState[prop] = true; };
+    const off = e => { e.preventDefault(); touchState[prop] = false; };
+    el.addEventListener('mousedown', on);
+    el.addEventListener('mouseup', off);
+    el.addEventListener('mouseleave', off);
+    el.addEventListener('touchstart', on, { passive: false });
+    el.addEventListener('touchend', off, { passive: false });
+  }
+  bindHold('touch-left', 'left');
+  bindHold('touch-right', 'right');
+  document.getElementById('touch-attack').addEventListener('click', () => { ensureAudio(); useWeapon(); });
+  document.getElementById('touch-reload').addEventListener('click', startReload);
+  elInteract.addEventListener('click', triggerInteract);
+
+  // Modaalien & yläpalkin napit
+  document.getElementById('btn-start-game').addEventListener('click', () => {
+    ensureAudio();
+    state.started = true;
+    closeAllModals();
+    showToast('🚂 Kävele oikealle lipunmyyntiin tai junan ovelle (A / D + E)!', 4);
+  });
+  document.getElementById('btn-buy-ticket').addEventListener('click', () => boardTrain('bought'));
+  document.getElementById('btn-stowaway').addEventListener('click', () => boardTrain('stowaway'));
+  document.getElementById('btn-close-ticket').addEventListener('click', closeAllModals);
+  document.getElementById('btn-close-shop').addEventListener('click', closeAllModals);
+
+  document.getElementById('btn-santa-nice').addEventListener('click', () => {
+    closeAllModals();
+    enterZone(9, 200);
+    showToast('🏭 Joulupukki vei sinut Tonttujen Tehtaalle! Sammuta serverit oikealla [E] tai mene Salaiselle Paikalle vasemmalta [E]!', 5);
+  });
+  document.getElementById('btn-santa-naughty').addEventListener('click', startSantaBombCutscene);
+  document.getElementById('btn-close-santa').addEventListener('click', closeAllModals);
+
+  document.getElementById('btn-rip-mega-train').addEventListener('click', () => {
+    state.player.hp = 100;
+    state.player.megabombs = Math.max(3, state.player.megabombs);
+    state.player.weapon = 8;
+    closeAllModals();
+    enterZone(2, 500);
+    showToast('☢️ Olet junassa Mega-aseilla! Heitä Megapommi (8) suistaaksesi junan ojaan!', 5);
+  });
+  document.getElementById('btn-rip-rovaniemi').addEventListener('click', () => {
+    state.player.hp = 100;
+    state.policeWanted = false;
+    closeAllModals();
+    enterZone(8, 220);
+  });
+  document.getElementById('btn-rip-restart').addEventListener('click', () => resetGame(true));
+
+  document.getElementById('btn-victory-continue').addEventListener('click', () => {
+    state.player.hp = 100;
+    closeAllModals();
+    enterZone(8, 220);
+  });
+  document.getElementById('btn-victory-restart').addEventListener('click', () => resetGame(true));
+
+  document.getElementById('btn-jump-rovaniemi').addEventListener('click', () => {
+    ensureAudio();
+    state.started = true;
+    state.ticket = 'bought';
+    closeAllModals();
+    enterZone(8, 180);
+    showToast('❄️ Pikasiirtyminen Rovaniemelle! Joulupukki & Salainen Paikka odottavat oikealla!');
+  });
+
+  document.getElementById('btn-jump-secret').addEventListener('click', () => {
+    ensureAudio();
+    state.started = true;
+    state.ticket = 'bought';
+    closeAllModals();
+    enterZone(11, 210);
+    showToast('🔐 Pikasiirtyminen Joulupukin Salaiseen Paikkaan! Sammuta Pääserverit [E] keskellä!', 4.5);
+  });
+
+  document.getElementById('btn-mute').addEventListener('click', () => {
+    muted = !muted;
+    document.getElementById('btn-mute').textContent = muted ? '🔇' : '🔊';
+  });
+
+  window.onload = () => {
+    resizeCanvas();
+    resetGame(false);
+    requestAnimationFrame(gameLoop);
+  };
+})();
+</script>
+</body>
+</html>
